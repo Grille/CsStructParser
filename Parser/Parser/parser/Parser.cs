@@ -1,33 +1,23 @@
 ﻿using System.IO;
 using System;
-namespace Programm
+namespace GGL.IO
 {
-    public partial class Pharser
+    public partial class Parser
     {
         private int length = 0;
         private int index = 0;
         private char[] data;
 
-        byte attributesLenght;
+        int attributesLenght;
         byte[] attributesTyp;
         string[] attributesName;
         Object[] attributesInitValue;
 
+        int enumLenght;
         int[] enumValue;
         string[] enumName;
 
         Result[] results;
-
-        public void Pharse()
-        {
-            deleteComments();
-            prepare();
-
-            pharseAttributes();
-            pharseInit();
-            pharseEnum();
-            pharseObjects();
-        }
 
         private void prepare()
         {
@@ -85,10 +75,12 @@ namespace Programm
 
         private void pharseAttributes()
         {
+            int pos = searchString("Attributes");
+            if (pos == -1) return;
+
             attributesTyp = new byte[256];
             attributesName = new string[256];
             attributesInitValue = new string[256];
-            int pos = searchString("Attributes");
             int scope = 0;
             byte attrIndex = 0;
 
@@ -111,9 +103,13 @@ namespace Programm
                         if (mode == 0)
                         {
                             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-                            if (data[pos] == 'b') typ = 0;
+                            if (data[pos] == 'b' && data[pos+1] == 'y') typ = 0;
                             else if (data[pos] == 'i') typ = 1;
+                            else if (data[pos] == 'f') typ = 2;
+                            else if (data[pos] == 'f') typ = 3;
+                            else if (data[pos] == 'b' && data[pos+1] == 'o') typ = 4;
                             else if (data[pos] == 's') typ = 5;
+                            else if (data[pos] == 'v') typ = 6;
                             array = 0;
                             mode = 1;
                         }
@@ -135,22 +131,23 @@ namespace Programm
 
             attributesInitValue = new Object[attributesLenght];
             Result.AttributesNumber = attributesLenght;
-            /*
+
+            //throw new Exception("Put your error message here.");
+            
             Console.WriteLine();
             for (int i = 0; i < attributesLenght; i++)
             {
-                Console.WriteLine("typ:" + attributes[i * 2] + "[" + attributes[i * 2 + 1] + "] " + attributesNames[i]+" = "+ attributesInitValues[i]);
+                Console.WriteLine("typ:" + attributesTyp[i * 2] + "[" + attributesTyp[i * 2 + 1] + "] " + attributesName[i]+" = "+ attributesInitValue[i]);
             }
-            */
+            
 
         }
 
         private void pharseInit()
         {
             int pos = searchString("Init");
-
-            //init default value;
             if (pos == -1) return;
+
             int scope = 0;
             int attri = 0;
             byte mode = 0;
@@ -165,10 +162,9 @@ namespace Programm
                     default:
                         switch (mode)
                         {
-                            case 0: attri = getAttributeByName(pos);break;
+                            case 0: attri = compareNames(getItem(pos),attributesName,attributesLenght);break;
                             case 1:
                                 attributesInitValue[attri] = getValue(ref pos, attri);
-                                Console.WriteLine(((int[])attributesInitValue[attri])[8]);
                                 mode = 0;
                                 break;
                         }
@@ -179,14 +175,21 @@ namespace Programm
 
         private void pharseEnum()
         {
+            int pos = searchString("Enum");
+            if (pos == -1)
+            {
+                enumValue = new int[0] { };
+                enumName = new string[0] { };
+                enumLenght = 0;
+                return;
+            }
+
             enumValue = new int[50];
             enumName = new string[50];
 
             string group = "";
             int index = 0;
             int value = 0;
-            int pos = searchString("Enum");
-            if (pos == -1) return;
             int scope = 0;
             do
             {
@@ -206,19 +209,26 @@ namespace Programm
                         {
                             string name = getItem(pos);
                             if (getItem(nextItem(pos)) == "=")
+                            {
                                 pos = nextItem(nextItem(pos));
+                                value = (int)convertTyp(1, ref pos);
+                            }
                             enumName[index] = group + '.' + name;
-                            enumValue[index] = value;
+                            enumValue[index++] = value;
                         }
                         break;
                 }
             } while (scope > 0);
+            enumLenght = index;
         }
+
         private void pharseObjects()
         {
+
             results = new Result[256];
 
             int pos = 0;
+            globalPos = 0;
             while (true)
             {
                 //search next ID
@@ -234,12 +244,21 @@ namespace Programm
                 results[id].Init(startPos, pid);
             }
             for (int i = 0; i < 256; i++) pharseObject(i);
+
+            /*
+            for (int i = 0; i < 256; i++)
+            {
+                if (!results[i].Used) continue;
+                Console.WriteLine("\n<objectID " + i+">");
+                for (int ia = 0; ia < attributesLenght; ia++)
+                    Console.WriteLine(attributesName[ia] + " = "+ results[i].AttributesValue[ia]);
+            }
+            */
+
         }
         private void pharseObject(int id)
         {
             if (!results[id].Used || results[id].State == 2) return;
-
-            Console.Write("\n--------------- ["+id+"]\n");
 
             results[id].State = 1;
             int pid = results[id].ParentID;
@@ -270,13 +289,12 @@ namespace Programm
                         switch (mode)
                         {
                             case 0:
-                                attri = getAttributeByName(pos);
-                                //Console.WriteLine(attri);
+                                attri = compareNames(getItem(pos), attributesName, attributesLenght);
+                                //if (attri == -1) throw new Exception("Attribute \""+ getItem(pos)+"\" in object: " +id+" not found!");
                                 break;
                             case 1:
                                 results[id].AttributesValue[attri] = getValue(ref pos,attri);
                                 mode = 0;
-                                Console.WriteLine(attributesName[attri] + "=" + results[id].AttributesValue[attri]);
                                 break;
                         }
                         break;

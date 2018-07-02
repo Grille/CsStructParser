@@ -1,0 +1,4 @@
+parser/.vs
+parser/parser/bin
+parser/parser/obj
+*.csproj.user

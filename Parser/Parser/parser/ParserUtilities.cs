@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Programm
+namespace GGL.IO
 {
-    public partial class Pharser
+    enum Typ { Byte, Int, Float,  Double, Bool, String, Var};
+    enum TypKind { Other, Number, Bool, Text,Command};
+    public partial class Parser
     {
 
         private int globalPos = 0;
@@ -30,15 +32,15 @@ namespace Programm
             while (data[index] != '\n') item += data[index++];
             return item;
         }
-        private int getAttributeByName()
+        private int compareNames(string name, string[] nameList)
         {
-            return getAttributeByName(globalPos);
+            return compareNames(name, nameList, nameList.Length);
         }
-        private int getAttributeByName(int pos)
+        private int compareNames(string name,string[] nameList,int lenght)
         {
-            for (int i = 0; i < attributesLenght; i++)
+            for (int i = 0; i < lenght; i++)
             {
-                if (testString(pos, attributesName[i]))
+                if (name == nameList[i])
                 {
                     return i;
                 }
@@ -58,7 +60,7 @@ namespace Programm
             object retValue = null;
 
             if (array == 0)
-                retValue = convertTyp(typ,getItem(pos));
+                retValue = convertTyp(typ,ref pos);
             else
             {
                 //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
@@ -72,6 +74,13 @@ namespace Programm
                     case 4: retValue = new bool[size]; break;
                     case 5: retValue = new string[size]; break;
                 }
+                
+                if (size == 0)
+                {
+                    //pos = nextItem(nextItem(pos));
+                    return retValue;
+                }
+                
                 int index = 0;
                 while (index < size)
                 {
@@ -82,12 +91,12 @@ namespace Programm
                         default:
                             switch (typ)
                             {
-                                case 0: ((byte[])(retValue))[index++] = (byte)convertTyp(0, getItem(pos)) ; break;
-                                case 1: ((int[])(retValue))[index++] = (int)convertTyp(1, getItem(pos)); break;
-                                case 2: ((float[])(retValue))[index++] = (float)convertTyp(2, getItem(pos)); break;
-                                case 3: ((double[])(retValue))[index++] = (double)convertTyp(3, getItem(pos)); break;
-                                case 4: ((bool[])(retValue))[index++] = (bool)convertTyp(4, getItem(pos)); break;
-                                case 5: ((string[])(retValue))[index++] = (string)convertTyp(5, getItem(pos)); break;
+                                case 0: ((byte[])(retValue))[index++] = (byte)convertTyp(0, ref pos) ; break;
+                                case 1: ((int[])(retValue))[index++] = (int)convertTyp(1, ref pos); break;
+                                case 2: ((float[])(retValue))[index++] = (float)convertTyp(2, ref pos); break;
+                                case 3: ((double[])(retValue))[index++] = (double)convertTyp(3, ref pos); break;
+                                case 4: ((bool[])(retValue))[index++] = (bool)convertTyp(4, ref pos); break;
+                                case 5: ((string[])(retValue))[index++] = (string)convertTyp(5, ref pos); break;
                             }
                         break;
                     }
@@ -96,9 +105,45 @@ namespace Programm
             }
             return retValue;
         }
+        private TypKind testTypKind(string value)
+        {
+            if (value == "true" || value == "false")
+                return TypKind.Bool;
+            switch (value[0])
+            {
+                case '0':case '1':case '2':case '3':case '4':
+                case '5':case '6':case '7':case '8':case '9':
+                    return TypKind.Number;
+                case '"':
+                    return TypKind.Text;
+                case '=':case '+':case '-':case '*':case '/':
+                    return TypKind.Command;
+            }
+            return TypKind.Other;
+        }
+        private object convertTyp(int typ, ref int pos)
+        {
+            if (testTypKind(getItem(pos))== TypKind.Command)
+            {
+                return convertTyp(typ, getItem(pos)+ getItem(pos = nextItem(pos)));
+            }
+            return convertTyp(typ, getItem(pos));
+        }
         private object convertTyp(int typ,string value)
         {
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
+            TypKind kind = testTypKind(value);
+
+            switch (typ)
+            {
+                case 0:case 1:case 2:case 3:
+                    if (kind == TypKind.Other)
+                    {
+                        int indx = compareNames(value, enumName, enumLenght);
+                        return  enumValue[indx];
+                    }
+                    break;
+            }
             switch (typ)
             {
                 case 0: return Convert.ToByte(value);
@@ -106,7 +151,7 @@ namespace Programm
                 case 2: return Convert.ToSingle(value);
                 case 3: return Convert.ToDouble(value);
                 case 4: return Convert.ToBoolean(value);
-                case 5: return value;
+                case 5: return value.Trim(new char[] { '"' });
                 default:return null;
             }
         }
@@ -118,7 +163,9 @@ namespace Programm
             {
                 switch (data[pos])
                 {
-                    case '[':scope++;break;
+                    case '[':scope++;
+                        if (getItem(nextItem(pos)) == "]") return 0;
+                        break;
                     case ']':scope--;break;
                     case ',':size++;break;
                 }

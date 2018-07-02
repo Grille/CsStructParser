@@ -1,6 +1,4 @@
 
-//File-0{
-
 Enums{ 
   effect{
     not, up, down ,break ,deacy ,destroy ,entf
@@ -10,6 +8,9 @@ Enums{
   }
   area{
     water, pollution, road, saltwater
+  }
+  i{
+    min=-32768, max=32767
   }
 }
 Attributes {
@@ -32,6 +33,7 @@ Attributes {
   byte groundMode, graphicMode;  
  
  int[] graphicNeighbors, groundNeighbors;
+
   byte diversity, size;
 
 
@@ -49,11 +51,11 @@ Attributes {
   int[] ResourcesDependent; //[[typ,minValue,maxValue,effects,mode]]
 }
 Init{
-  //diversity = 1;
-  //size = 1;
-  //decayTyp = [13];
+  diversity = 1;
+  size = 1;
+  decayTyp = [13];
 
-  //destroyTyp = [13];
+  destroyTyp = [13];
 
   canBuiltOn = [0,3,4,5,6,7,8,9,13];
 
@@ -82,7 +84,6 @@ ID-2:1 {
   name = "Saltwater"; 
   groundPath = "../Data/texture/nature/saltwater_0";
   
-
   AreaPermanent = [[3,1,1]]
  
 }
@@ -102,7 +103,7 @@ destroyTyp = [9];
   
   AreaPermanent = [[area.pollution,3,2]];
   
-  AreaDependent = [[area.pollution,0,inf+,effect.down ,1]];
+  AreaDependent = [[area.pollution,0, i.max ,effect.down ,1]];
  
 }
 ID-4:3 {
@@ -129,7 +130,7 @@ ID-6 {
   upgradeTyp = [3];
   destroyTyp = [9];
  
-  AreaDependent = [[area.pollution,0,inf+,effect.up ,0]];
+  AreaDependent = [[area.pollution,0,i.max ,effect.up ,0]];
  
 }
  
@@ -159,7 +160,7 @@ ID-9 {
 
 //	<---- Road ---->
 ID-23 {
-  
+
   name = "medium road"; 
   
   groundPath = "../Data/texture/urban/road/RM_1";
@@ -185,8 +186,7 @@ ID-24:23
  
   groundPath = "../Data/texture/urban/road/RL_1";
    
-
-  canBuiltOn + [23];
+  canBuiltOn = [23];
   
   AreaPermanent = [[2,3,1],[2,1,100]];
   
@@ -198,4 +198,4 @@ ID-24:23
 
 
 
-//}
+
