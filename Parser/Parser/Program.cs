@@ -19,15 +19,9 @@ namespace Programm
                 if (!phaser.IDUsed(id)) continue;
                 Console.WriteLine("\n<objectID " + id + ">");
                 Console.WriteLine(phaser.GetAttribute<string>(id, "name"));
-                
-                /*
-                byte[] array = phaser.GetAttribute<byte[]>(id, "canBuiltOn");
-                for (int i = 0; i < array.Length; i++)
-                {
-                    Console.Write(array[i]);
-                }
-                */
-                
+                string[] array = phaser.GetAttribute<string[]>(id, "array");
+                for (int i = 0; i < array.Length; i++) Console.WriteLine(array[i]);
+                //Console.WriteLine(phaser.GetAttribute<int>(id, "value"));
             }
             Console.ReadKey();
         }

@@ -16,7 +16,7 @@ namespace GGL.IO
         {
             return nextItem(globalPos);
         }
-            private int nextItem(int index)
+        private int nextItem(int index)
         {
             while (data[index++] != '\n') { }
             globalPos = index;
@@ -140,7 +140,13 @@ namespace GGL.IO
                     if (kind == TypKind.Other)
                     {
                         int indx = compareNames(value, enumName, enumLenght);
-                        return  enumValue[indx];
+                        switch (typ)
+                        {
+                            case 0: return (byte)enumValue[indx];
+                            case 1: return enumValue[indx];
+                            case 2: return (float)enumValue[indx];
+                            case 3: return (double)enumValue[indx];
+                        }
                     }
                     break;
             }
@@ -173,6 +179,27 @@ namespace GGL.IO
             } while (scope > 0);
             return size+1;
 
+        }
+        private object combineArray(int typ,object array1,object array2)
+        {
+            //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
+            switch (typ)
+            {
+                case 0: return combineArray((byte[])array1, (byte[])array2);
+                case 1: return combineArray((int[])array1, (int[])array2);
+                case 2: return combineArray((float[])array1, (float[])array2);
+                case 3: return combineArray((double[])array1, (double[])array2);
+                case 4: return combineArray((bool[])array1, (bool[])array2);
+                case 5: return combineArray((string[])array1, (string[])array2);
+            }
+            return null;
+        }
+        private T[] combineArray<T>(T[] array1, T[] array2)
+        {
+            T[] array = new T[array1.Length + array2.Length];
+            array1.CopyTo(array, 0);
+            array2.CopyTo(array, array1.Length);
+            return array;
         }
 
         private bool testString(int pos, string input)

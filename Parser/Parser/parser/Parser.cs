@@ -285,6 +285,7 @@ namespace GGL.IO
                     case '{': scope++; break;
                     case '}': scope--; break;
                     case '=': mode = 1; break;
+                    case '+': mode = 2; break;
                     default:
                         switch (mode)
                         {
@@ -296,13 +297,19 @@ namespace GGL.IO
                                 results[id].AttributesValue[attri] = getValue(ref pos,attri);
                                 mode = 0;
                                 break;
+                            case 2:
+                                if (attributesTyp[attri * 2 + 1] > 0)
+                                {
+                                    results[id].AttributesValue[attri] = combineArray(attributesTyp[attri * 2],results[id].AttributesValue[attri], getValue(ref pos, attri));
+                                }
+                                mode = 0;
+                                break;
                         }
                         break;
                 }
                 pos = nextItem(pos);
             } while (scope == 1);
             results[id].State = 2;
-
         }
     }
 }
