@@ -5,19 +5,34 @@ namespace GGL.IO
     public partial class Parser
     {
         private int length = 0;
-        private int index = 0;
         private char[] data;
 
-        int attributesLenght;
+        byte attributesIndex;
         byte[] attributesTyp;
         string[] attributesName;
         Object[] attributesInitValue;
 
-        int enumLenght;
+        int enumIndex;
         int[] enumValue;
         string[] enumName;
 
         Result[] results;
+
+        public Parser()
+        {
+            Clear();
+        }
+
+        private void parse()
+        {
+            deleteComments();
+            prepare();
+
+            pharseAttributes();
+            pharseInit();
+            pharseEnum();
+            pharseObjects();
+        }
 
         private void prepare()
         {
@@ -43,7 +58,7 @@ namespace GGL.IO
 
             //collapse ends
             iEnd = iDst; iDst = 0;
-            for (iSrc = 1; iSrc <= iEnd; iSrc++)
+            for (iSrc = 0; iSrc <= iEnd; iSrc++)
             {
                 if (data[iSrc] != '\n' || data[iSrc + 1] != '\n') data[iDst++] = data[iSrc];
             }
@@ -77,12 +92,7 @@ namespace GGL.IO
         {
             int pos = searchString("Attributes");
             if (pos == -1) return;
-
-            attributesTyp = new byte[256];
-            attributesName = new string[256];
-            attributesInitValue = new string[256];
             int scope = 0;
-            byte attrIndex = 0;
 
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
             // cond = a.a >= 9
@@ -115,11 +125,11 @@ namespace GGL.IO
                         }
                         else if (mode == 1)
                         {
-                            attributesTyp[attrIndex * 2] = typ;
-                            attributesTyp[attrIndex * 2 + 1] = array;
-                            attributesName[attrIndex] = getItem(pos);
-                            attributesInitValue[attrIndex] = "s";
-                            attrIndex++;
+                            attributesTyp[attributesIndex * 2] = typ;
+                            attributesTyp[attributesIndex * 2 + 1] = array;
+                            attributesName[attributesIndex] = getItem(pos);
+                            attributesInitValue[attributesIndex] = "s";
+                            attributesIndex++;
                             mode = 0;
                         }
                         break;
@@ -127,15 +137,14 @@ namespace GGL.IO
                 if (mode == 2) array++;
 
             } while (scope == 1);
-            attributesLenght = attrIndex;
 
-            attributesInitValue = new Object[attributesLenght];
-            Result.AttributesNumber = attributesLenght;
+            attributesInitValue = new Object[attributesIndex];
+            Result.AttributesNumber = attributesIndex;
 
             //throw new Exception("Put your error message here.");
             
             Console.WriteLine();
-            for (int i = 0; i < attributesLenght; i++)
+            for (int i = 0; i < attributesIndex; i++)
             {
                 Console.WriteLine("typ:" + attributesTyp[i * 2] + "[" + attributesTyp[i * 2 + 1] + "] " + attributesName[i]+" = "+ attributesInitValue[i]);
             }
@@ -162,7 +171,7 @@ namespace GGL.IO
                     default:
                         switch (mode)
                         {
-                            case 0: attri = compareNames(getItem(pos),attributesName,attributesLenght);break;
+                            case 0: attri = compareNames(getItem(pos),attributesName,attributesIndex);break;
                             case 1:
                                 attributesInitValue[attri] = getValue(ref pos, attri);
                                 mode = 0;
@@ -176,19 +185,9 @@ namespace GGL.IO
         private void pharseEnum()
         {
             int pos = searchString("Enum");
-            if (pos == -1)
-            {
-                enumValue = new int[0] { };
-                enumName = new string[0] { };
-                enumLenght = 0;
-                return;
-            }
-
-            enumValue = new int[50];
-            enumName = new string[50];
+            if (pos == -1) return;
 
             string group = "";
-            int index = 0;
             int value = 0;
             int scope = 0;
             do
@@ -213,20 +212,16 @@ namespace GGL.IO
                                 pos = nextItem(nextItem(pos));
                                 value = (int)convertTyp(1, ref pos);
                             }
-                            enumName[index] = group + '.' + name;
-                            enumValue[index++] = value;
+                            enumName[enumIndex] = group + '.' + name;
+                            enumValue[enumIndex++] = value;
                         }
                         break;
                 }
             } while (scope > 0);
-            enumLenght = index;
         }
 
         private void pharseObjects()
         {
-
-            results = new Result[256];
-
             int pos = 0;
             globalPos = 0;
             while (true)
@@ -267,11 +262,11 @@ namespace GGL.IO
             if (pid != -1 && results[pid].Used)
             {
                 pharseObject(pid);
-                for (int i = 0; i < attributesLenght; i++) results[id].AttributesValue[i] = results[pid].AttributesValue[i];
+                for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = results[pid].AttributesValue[i];
             }
             else
             {
-                for (int i = 0; i < attributesLenght; i++) results[id].AttributesValue[i] = attributesInitValue[i];
+                for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = attributesInitValue[i];
             }
 
             int pos = searchString("{", results[id].Pos);
@@ -290,7 +285,7 @@ namespace GGL.IO
                         switch (mode)
                         {
                             case 0:
-                                attri = compareNames(getItem(pos), attributesName, attributesLenght);
+                                attri = compareNames(getItem(pos), attributesName, attributesIndex);
                                 //if (attri == -1) throw new Exception("Attribute \""+ getItem(pos)+"\" in object: " +id+" not found!");
                                 break;
                             case 1:

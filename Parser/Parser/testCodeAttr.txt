@@ -1,0 +1,11 @@
+
+Attributes
+ {
+  string name;
+  int test;
+ }
+
+ Init{
+  name = "null";
+  test = 0;
+}

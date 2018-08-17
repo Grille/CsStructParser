@@ -11,17 +11,17 @@ namespace Programm
     {
         static void Main(string[] args)
         {
-            Parser phaser = new Parser();
-            phaser.LoadData("../../gameObject.gd");
-            phaser.Parse();
+            Parser parser = new Parser();
+            parser.AddEnum("res", "waste", 3);
+            parser.ParseCode("Attributes{string name;int test;}Init{name = \"null\";test = 0;}");
+            //parser.ParseFile("../../testCodeAttr.txt");
+            parser.ParseFile("../../testCodeData.txt");
             for (int id = 0; id < 256; id++)
             {
-                if (!phaser.IDUsed(id)) continue;
+                if (!parser.IDUsed(id)) continue;
                 Console.WriteLine("\n<objectID " + id + ">");
-                Console.WriteLine(phaser.GetAttribute<string>(id, "name"));
-                string[] array = phaser.GetAttribute<string[]>(id, "array");
-                for (int i = 0; i < array.Length; i++) Console.WriteLine(array[i]);
-                //Console.WriteLine(phaser.GetAttribute<int>(id, "value"));
+                Console.WriteLine(parser.GetAttribute<string>(id, "name"));
+                Console.WriteLine(parser.GetAttribute<int>(id, "test"));
             }
             Console.ReadKey();
         }

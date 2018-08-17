@@ -59,7 +59,8 @@
     <None Include="gameObject.gd" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="testCode.txt" />
+    <Content Include="testCodeAttr.txt" />
+    <Content Include="testCodeData.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

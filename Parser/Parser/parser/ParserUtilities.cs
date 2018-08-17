@@ -139,7 +139,7 @@ namespace GGL.IO
                 case 0:case 1:case 2:case 3:
                     if (kind == TypKind.Other)
                     {
-                        int indx = compareNames(value, enumName, enumLenght);
+                        int indx = compareNames(value, enumName, enumIndex);
                         switch (typ)
                         {
                             case 0: return (byte)enumValue[indx];
