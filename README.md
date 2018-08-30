@@ -33,7 +33,7 @@ default values for attributes<br>
   name = "";
   number = 42;
   array1 = [];
-}
+ }
 ````
 set values<br>
 ````js

@@ -116,7 +116,7 @@ namespace GGL.IO
                             if (data[pos] == 'b' && data[pos+1] == 'y') typ = 0;
                             else if (data[pos] == 'i') typ = 1;
                             else if (data[pos] == 'f') typ = 2;
-                            else if (data[pos] == 'f') typ = 3;
+                            else if (data[pos] == 'd') typ = 3;
                             else if (data[pos] == 'b' && data[pos+1] == 'o') typ = 4;
                             else if (data[pos] == 's') typ = 5;
                             else if (data[pos] == 'v') typ = 6;

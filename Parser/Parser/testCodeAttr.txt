@@ -1,11 +1,14 @@
 
+Enum-effect{not, up, down ,break ,deacy ,destroy ,entf}
 Attributes
  {
+  Straﬂe straﬂe;
   string name;
   int test;
  }
 
- Init{
+Init
+ {
   name = "null";
   test = 0;
-}
+ }

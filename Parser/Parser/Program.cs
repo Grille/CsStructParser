@@ -12,6 +12,7 @@ namespace Programm
         static void Main(string[] args)
         {
             Parser parser = new Parser();
+            parser.AddAttribute("int[]", "test2", "0");
             parser.AddEnum("res", "waste", 3);
             parser.ParseCode("Attributes{string name;int test;}Init{name = \"null\";test = 0;}");
             //parser.ParseFile("../../testCodeAttr.txt");
