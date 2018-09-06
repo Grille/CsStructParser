@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System;
+using System.Threading;
 namespace GGL.IO
 {
     public partial class Parser
@@ -8,8 +9,11 @@ namespace GGL.IO
         private char[] data;
 
         byte attributesIndex;
+        byte objectsIndex;
+
         byte[] attributesTyp;
         string[] attributesName;
+        string[] objectsName;
         Object[] attributesInitValue;
 
         int enumIndex;
@@ -39,14 +43,15 @@ namespace GGL.IO
             int iSrc, iDst = 0, iEnd;
             bool stringMode = false;
             char[] dstData = new char[data.Length * 2];
-
+            //Console.BackgroundColor = ConsoleColor.DarkGray;
             //normalize ends, isolate operators
             for (iSrc = 0; iSrc < length; iSrc++)
             {
                 if (data[iSrc] == '"') stringMode = !stringMode;
+
                 if (stringMode) dstData[iDst++] = data[iSrc];
-                else if (data[iSrc] == ' ' || data[iSrc] == '\r' || data[iSrc] == ';') dstData[iDst++] = '\n';
-                else if (data[iSrc] == ',' || data[iSrc] == '{' || data[iSrc] == '}' || data[iSrc] == '[' || data[iSrc] == ']' || data[iSrc] == '=' || data[iSrc] == '+' || data[iSrc] == '-' || data[iSrc] == '*' || data[iSrc] == '/' || data[iSrc] == ':')
+                else if (data[iSrc] == ' ' || data[iSrc] == '\r' || data[iSrc] == ';' || data[iSrc] == ';') dstData[iDst++] = '\n'; 
+                else if (data[iSrc] == ',' || data[iSrc] == '{' || data[iSrc] == '}' || data[iSrc] == '[' || data[iSrc] == ']' || data[iSrc] == '=' || data[iSrc] == '+' || data[iSrc] == '-' || data[iSrc] == '*' || data[iSrc] == '/' || data[iSrc] == ':' || data[iSrc] == '<' || data[iSrc] == '>')
                 {
                     dstData[iDst++] = '\n';
                     dstData[iDst++] = data[iSrc];
@@ -60,9 +65,17 @@ namespace GGL.IO
             iEnd = iDst; iDst = 0;
             for (iSrc = 0; iSrc <= iEnd; iSrc++)
             {
-                if (data[iSrc] != '\n' || data[iSrc + 1] != '\n') data[iDst++] = data[iSrc];
+                if (data[iSrc] == '"') stringMode = !stringMode;
+                if (stringMode || data[iSrc] != '\n' || data[iSrc + 1] != '\n') data[iDst++] = data[iSrc];
             }
             length = iDst;
+            /*
+            while (true)
+            {
+                Console.WriteLine(getItem());
+                nextItem();
+            }
+            */
         }
         private void deleteComments()
         {
@@ -227,16 +240,19 @@ namespace GGL.IO
             while (true)
             {
                 //search next ID
-                searchString("ID", globalPos);
+
+                searchString("<", globalPos);
                 if (globalPos == -1) break;
 
-                int startPos = globalPos, id = 0, pid = -1;
+                nextItem();
+                int startPos = globalPos, pid = -1;
+                string name = getItem();
+                nextItem();
+                if (data[nextItem()] == ':') pid = compareNames(getItem(nextItem()),objectsName);
 
-                if (data[nextItem()] == '-') nextItem();
-                id = Convert.ToInt32(getItem());
-                if (data[nextItem()] == ':') pid = Convert.ToInt32(getItem(nextItem()));
-
-                results[id].Init(startPos, pid);
+                objectsName[objectsIndex] = name;
+                results[objectsIndex].Init(startPos, pid);
+                objectsIndex++;
             }
             for (int i = 0; i < 256; i++) pharseObject(i);
 
@@ -286,7 +302,7 @@ namespace GGL.IO
                         {
                             case 0:
                                 attri = compareNames(getItem(pos), attributesName, attributesIndex);
-                                //if (attri == -1) throw new Exception("Attribute \""+ getItem(pos)+"\" in object: " +id+" not found!");
+                                //if (attri == -1) throw new Exception("Attribute \""+ getItem(pos)+"\" in <"+objectsName[id]+"> not found!");
                                 break;
                             case 1:
                                 results[id].AttributesValue[attri] = getValue(ref pos,attri);

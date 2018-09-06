@@ -4,9 +4,13 @@ namespace GGL.IO
 {
     public partial class Parser
     {
-        public bool IDUsed(int id)
+        public bool Exists(int number)
         {
-            return results[id].Used;
+            return Exists("" + number);
+        }
+        public bool Exists(string name)
+        {
+            return compareNames(name,objectsName) != -1;
         }
         public void Clear()
         {
@@ -19,7 +23,19 @@ namespace GGL.IO
             enumValue = new int[256];
             enumName = new string[256];
 
+            objectsName = new string[256];
+
             results = new Result[256];
+        }
+        public string[] GetAttributeNames()
+        {
+            Array.Resize(ref attributesName, objectsIndex);
+            return attributesName;
+        }
+        public string[] GetObjectNames()
+        {
+            Array.Resize(ref objectsName, objectsIndex);
+            return objectsName;
         }
         public void AddEnum(string group,string name,int value)
         {
@@ -45,12 +61,18 @@ namespace GGL.IO
             attributesInitValue[attributesIndex] = value;
             attributesIndex++;
         }
-        
-        public T GetAttribute<T>(int id,string name)
+
+        public T GetAttribute<T>(int number, string name)
         {
-            if (!results[id].Used) return default(T);
+            return GetAttribute<T>("" + number, name);
+        }
+        public T GetAttribute<T>(string objectname,string name)
+        {
+            int obj = compareNames(objectname, objectsName);
+            if (obj == -1) return default(T);
+            if (!results[obj].Used) return default(T);
             int attri = compareNames(name, attributesName);
-            return (T)results[id].AttributesValue[attri];
+            return (T)results[obj].AttributesValue[attri];
         }
         public void ParseFile(string path)
         {

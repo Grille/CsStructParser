@@ -1,14 +1,27 @@
-
+Ôªø
 Enum-effect{not, up, down ,break ,deacy ,destroy ,entf}
-Attributes
- {
-  Straﬂe straﬂe;
-  string name;
-  int test;
- }
 
-Init
- {
+Attributes{
+  string name;
+  byte[] array1;
+}
+Init{
   name = "null";
-  test = 0;
- }
+}
+
+<tree>{
+  name = "tree";
+  array1 = [6,89];
+}
+<lol>:tree{
+  name = "lol";
+  array1 + [9];
+}
+<0>{
+  name = "obj-0";
+  array1 = [1,2];
+}
+<1>:lol{ //inherits from obj0
+  name = "obj-1";
+  array1 + [3,4];
+}

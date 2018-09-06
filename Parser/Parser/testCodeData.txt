@@ -1,8 +1,0 @@
-
- ID-0 {
-   name = "name1";
- }
-  ID-1 {
-  name = "nshal";
-  test2 = [0,0]
- }
