@@ -10,8 +10,18 @@ namespace GGL.IO
     public partial class Parser
     {
 
+
+        
         private int globalPos = 0;
 
+        private int searchTokenIndex(string name)
+        {
+            for (int i = 0;i< tokenList.Length; i++)
+            {
+                if (tokenList[i].value == name) return i;
+            }
+            return -1;
+        }
         private int nextItem()
         {
             return nextItem(globalPos);
@@ -60,7 +70,7 @@ namespace GGL.IO
             object retValue = null;
 
             if (array == 0)
-                retValue = convertTyp(typ,ref pos);
+                retValue = convertTyp(typ, pos);
             else
             {
                 //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
@@ -81,31 +91,32 @@ namespace GGL.IO
                     return retValue;
                 }
                 
+                
                 int index = 0;
                 while (index < size)
                 {
-                    pos = nextItem(pos);
-                    switch (data[pos])
+                    pos+=1;
+                    switch (tokenList[pos].value[0])
                     {
                         case '[':case ']':case ',': break;
                         default:
                             switch (typ)
                             {
-                                case 0: ((byte[])(retValue))[index++] = (byte)convertTyp(0, ref pos) ; break;
-                                case 1: ((int[])(retValue))[index++] = (int)convertTyp(1, ref pos); break;
-                                case 2: ((float[])(retValue))[index++] = (float)convertTyp(2, ref pos); break;
-                                case 3: ((double[])(retValue))[index++] = (double)convertTyp(3, ref pos); break;
-                                case 4: ((bool[])(retValue))[index++] = (bool)convertTyp(4, ref pos); break;
-                                case 5: ((string[])(retValue))[index++] = (string)convertTyp(5, ref pos); break;
+                                case 0: ((byte[])retValue)[index++] = (byte)convertTyp(0, pos) ; break;
+                                case 1: ((int[])retValue)[index++] = (int)convertTyp(1, pos); break;
+                                case 2: ((float[])retValue)[index++] = (float)convertTyp(2, pos); break;
+                                case 3: ((double[])retValue)[index++] = (double)convertTyp(3, pos); break;
+                                case 4: ((bool[])retValue)[index++] = (bool)convertTyp(4, pos); break;
+                                case 5: ((string[])retValue)[index++] = (string)convertTyp(5, pos); break;
                             }
                         break;
                     }
                 }
-                
+                pos += 1;
             }
             return retValue;
         }
-        private TypKind testTypKind(string value)
+        private TypKind testKind(string value)
         {
             if (value == "true" || value == "false")
                 return TypKind.Bool;
@@ -117,39 +128,47 @@ namespace GGL.IO
                 case '"':
                     return TypKind.Text;
                 case '=':case '+':case '-':case '*':case '/':
+                case ',':
+                case '{':
+                case '}':
+                case '(':
+                case ')':
+                case '[':
+                case ']':
+                case ':':
+                case '<':
+                case '>':
+                case ';':
                     return TypKind.Command;
             }
             return TypKind.Other;
         }
+        /*
         private object convertTyp(int typ, ref int pos)
         {
-            if (testTypKind(getItem(pos))== TypKind.Command)
+            if (testKind(getItem(pos))== TypKind.Command)
             {
                 return convertTyp(typ, getItem(pos)+ getItem(pos = nextItem(pos)));
             }
             return convertTyp(typ, getItem(pos));
         }
-        private object convertTyp(int typ,string value)
+        */
+        private object convertTyp(int typ,int index)
         {
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-            TypKind kind = testTypKind(value);
-
-            switch (typ)
+            if (typ < 4 && tokenList[index].kind == TypKind.Other)
             {
-                case 0:case 1:case 2:case 3:
-                    if (kind == TypKind.Other)
-                    {
-                        int indx = compareNames(value, enumName, enumIndex);
-                        switch (typ)
-                        {
-                            case 0: return (byte)enumValue[indx];
-                            case 1: return enumValue[indx];
-                            case 2: return (float)enumValue[indx];
-                            case 3: return (double)enumValue[indx];
-                        }
-                    }
-                    break;
+                int indx = compareNames(tokenList[index].value, enumName, enumIndex);
+                switch (typ)
+                {
+                    case 0: return (byte)enumValue[indx];
+                    case 1: return enumValue[indx];
+                    case 2: return (float)enumValue[indx];
+                    case 3: return (double)enumValue[indx];
+                }
             }
+            
+            string value = tokenList[index].value;
             switch (typ)
             {
                 case 0: return Convert.ToByte(value);
@@ -157,25 +176,25 @@ namespace GGL.IO
                 case 2: return Convert.ToSingle(value);
                 case 3: return Convert.ToDouble(value);
                 case 4: return Convert.ToBoolean(value);
-                case 5: return value.Trim(new char[] { '"' });
+                case 5: return value;
                 default:return null;
             }
         }
-        private int testArraySize(int pos)
+        private int testArraySize(int index)
         {
             int scope = 0;
             int size = 0;
             do
             {
-                switch (data[pos])
+                switch (tokenList[index].value)
                 {
-                    case '[':scope++;
-                        if (getItem(nextItem(pos)) == "]") return 0;
+                    case "[":scope++;
+                        if (tokenList[index+1].value == "]") return 0;
                         break;
-                    case ']':scope--;break;
-                    case ',':size++;break;
+                    case "]":scope--;break;
+                    case ",":size++;break;
                 }
-                pos = nextItem(pos);
+                index++;
             } while (scope > 0);
             return size+1;
 

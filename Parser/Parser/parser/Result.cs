@@ -5,7 +5,7 @@ using System.Text;
 
 namespace GGL.IO
 {
-    public struct Result
+    struct Result
     {
         public bool Used;
         public int Pos;

@@ -5,8 +5,13 @@ namespace GGL.IO
 {
     public partial class Parser
     {
+        const int con = 9,h=8;
+        enum enu { gg,dd,rr};
+
         private int length = 0;
         private char[] data;
+        Token[] tokenList;
+
 
         byte attributesIndex;
         byte objectsIndex;
@@ -34,7 +39,7 @@ namespace GGL.IO
 
             pharseAttributes();
             pharseInit();
-            pharseEnum();
+            //pharseEnum();
             pharseObjects();
         }
 
@@ -51,7 +56,7 @@ namespace GGL.IO
 
                 if (stringMode) dstData[iDst++] = data[iSrc];
                 else if (data[iSrc] == ' ' || data[iSrc] == '\r' || data[iSrc] == ';' || data[iSrc] == ';') dstData[iDst++] = '\n'; 
-                else if (data[iSrc] == ',' || data[iSrc] == '{' || data[iSrc] == '}' || data[iSrc] == '[' || data[iSrc] == ']' || data[iSrc] == '=' || data[iSrc] == '+' || data[iSrc] == '-' || data[iSrc] == '*' || data[iSrc] == '/' || data[iSrc] == ':' || data[iSrc] == '<' || data[iSrc] == '>')
+                else if (data[iSrc] == ',' || data[iSrc] == '{' || data[iSrc] == '}' || data[iSrc] == '[' || data[iSrc] == ']' || data[iSrc] == '=' || data[iSrc] == '+' || data[iSrc] == '-' || data[iSrc] == '*' || data[iSrc] == '/' || data[iSrc] == ':' || data[iSrc] == '<' || data[iSrc] == '>' || data[iSrc] == ';')
                 {
                     dstData[iDst++] = '\n';
                     dstData[iDst++] = data[iSrc];
@@ -69,6 +74,45 @@ namespace GGL.IO
                 if (stringMode || data[iSrc] != '\n' || data[iSrc + 1] != '\n') data[iDst++] = data[iSrc];
             }
             length = iDst;
+
+            //Array.Resize(ref data, length);
+
+            int tokenCount = 0;
+            for (int i = 0;i< length; i++)
+            {
+                if (data[i] == '\n') tokenCount++;
+            }
+            tokenList = new Token[tokenCount];
+            nextItem(0);
+            for (int i = 0;i< tokenCount; i++)
+            {
+                tokenList[i].value = getItem();
+                tokenList[i].kind = testKind(tokenList[i].value);
+                tokenList[i].line = i;
+                nextItem();
+            }
+            for (int i = 0; i < tokenList.Length; i++)
+            {
+                switch (tokenList[i].kind)
+                {
+                    case TypKind.Command:
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                        break;
+                    case TypKind.Number:
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        break;
+                    case TypKind.Text:
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        break;
+                    default:
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                        break;
+                }
+                Console.Write(tokenList[i].value+" ");
+            }
+
+            Console.WriteLine(tokenCount);
+            //for (int i = 0)
             /*
             while (true)
             {
@@ -103,101 +147,90 @@ namespace GGL.IO
 
         private void pharseAttributes()
         {
-            int pos = searchString("Attributes");
-            if (pos == -1) return;
-            int scope = 0;
-
-            //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-            // cond = a.a >= 9
-            byte typ = 0;
-            byte mode = 0;
-            byte array = 0;
-            do
+            int index = searchTokenIndex("Attributes")+2;
+            while (tokenList[index].value != "}")
             {
-                pos = nextItem(pos);
-                switch (data[pos])
+                Console.ForegroundColor = ConsoleColor.Green;
+                byte array = 0;
+                string type;
+                if (tokenList[index + 1].value != "=")
                 {
-                    case '{': scope++; break;
-                    case '}': scope--; break;
-                    case '[': mode = 2; break;
-                    case ']': mode = 1; break;
-                    case ',': if (mode == 0) mode = 1; break;
-                    default:
-                        if (mode == 0)
+                    type = tokenList[index++].value;
+                    if (tokenList[index].value == "[")
+                    {
+                        array = 1; index += 2;
+                    }
+
+                    byte typ = 0; //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
+                    if (type[0] == 'b' && type[0 + 1] == 'y') typ = 0;
+                    else if (type[0] == 'i') typ = 1;
+                    else if (type[0] == 'f') typ = 2;
+                    else if (type[0] == 'd') typ = 3;
+                    else if (type[0] == 'b' && type[0 + 1] == 'o') typ = 4;
+                    else if (type[0] == 's') typ = 5;
+                    else if (type[0] == 'v') typ = 6;
+
+                    int i = 0;
+                    do
+                    {
+                        if (i++ > 0) index += 2;
+                        string name = tokenList[index].value;
+                        object value = null;
+
+                        attributesTyp[attributesIndex * 2] = typ;
+                        attributesTyp[attributesIndex * 2 + 1] = array;
+                        attributesName[attributesIndex] = tokenList[index].value;
+                        if (tokenList[index + 1].value == "=")
                         {
-                            //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-                            if (data[pos] == 'b' && data[pos+1] == 'y') typ = 0;
-                            else if (data[pos] == 'i') typ = 1;
-                            else if (data[pos] == 'f') typ = 2;
-                            else if (data[pos] == 'd') typ = 3;
-                            else if (data[pos] == 'b' && data[pos+1] == 'o') typ = 4;
-                            else if (data[pos] == 's') typ = 5;
-                            else if (data[pos] == 'v') typ = 6;
-                            array = 0;
-                            mode = 1;
+                            index += 2;
+                            value = getValue(ref index, attributesIndex);
+                            attributesInitValue[attributesIndex] = value;
                         }
-                        else if (mode == 1)
-                        {
-                            attributesTyp[attributesIndex * 2] = typ;
-                            attributesTyp[attributesIndex * 2 + 1] = array;
-                            attributesName[attributesIndex] = getItem(pos);
-                            attributesInitValue[attributesIndex] = "s";
-                            attributesIndex++;
-                            mode = 0;
-                        }
-                        break;
+                        attributesIndex++;
+
+                        Console.WriteLine(type + "[" + array + "]->" + name + (value != null ? ("=" + value) : "") + ";");
+                    } while (tokenList[index + 1].value == ",");
+
                 }
-                if (mode == 2) array++;
+                else if (tokenList[index + 1].value == "=")
+                {
+                    int attri = compareNames(tokenList[index].value, attributesName);
+                    if (attri == -1) throw new Exception("attribute \"" + tokenList[index].value + "\" is not defined");
+                    index += 2;
+                    attributesInitValue[attri] = getValue(ref index, attri);
 
-            } while (scope == 1);
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(attributesName[attri]+"="+attributesInitValue[attri]+";");
+                }
 
-            attributesInitValue = new Object[attributesIndex];
-            Result.AttributesNumber = attributesIndex;
-
-            //throw new Exception("Put your error message here.");
-            
-            Console.WriteLine();
-            for (int i = 0; i < attributesIndex; i++)
-            {
-                Console.WriteLine("typ:" + attributesTyp[i * 2] + "[" + attributesTyp[i * 2 + 1] + "] " + attributesName[i]+" = "+ attributesInitValue[i]);
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.WriteLine(tokenList[index].value);
+                index++;
             }
-            
-
+            Console.WriteLine("attributesIndex " + attributesIndex);
         }
-
         private void pharseInit()
         {
-            int pos = searchString("Init");
-            if (pos == -1) return;
-
-            int scope = 0;
-            int attri = 0;
-            byte mode = 0;
-            do
+            int index = searchTokenIndex("Init") + 2;
+            while (tokenList[index].value != "}")
             {
-                pos = nextItem(pos);
-                switch (data[pos])
+                if (tokenList[index + 1].value == "=")
                 {
-                    case '{': scope++; break;
-                    case '}': scope--; break;
-                    case '=': mode = 1; break;
-                    default:
-                        switch (mode)
-                        {
-                            case 0: attri = compareNames(getItem(pos),attributesName,attributesIndex);break;
-                            case 1:
-                                attributesInitValue[attri] = getValue(ref pos, attri);
-                                mode = 0;
-                                break;
-                        }
-                        break;
+                    int attri = compareNames(tokenList[index].value, attributesName);
+                    if (attri == -1) throw new Exception("attribute \"" + tokenList[index].value + "\" is not defined");
+                    index += 2;
+                    attributesInitValue[attri] = getValue(ref index, attri);
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(attributesName[attri] + "=" + attributesInitValue[attri] + ";");
                 }
-            } while (scope == 1);
+                index++;
+            }
         }
 
         private void pharseEnum()
         {
-            int pos = searchString("Enum");
+            
+            int pos = searchTokenIndex("Enums");
             if (pos == -1) return;
 
             string group = "";
@@ -205,8 +238,8 @@ namespace GGL.IO
             int scope = 0;
             do
             {
-                pos = nextItem(pos);
-                switch (data[pos])
+                pos++;
+                switch (tokenList[pos].value[0])
                 {
                     case '{': scope++; break;
                     case '}': scope--; break;
@@ -214,16 +247,16 @@ namespace GGL.IO
                     default:
                         if (scope == 1)
                         {
-                            group = getItem(pos);
+                            group = tokenList[pos].value;
                             value = 0;
                         }
                         else if (scope == 2)
                         {
-                            string name = getItem(pos);
-                            if (getItem(nextItem(pos)) == "=")
+                            string name = tokenList[pos].value;
+                            if (tokenList[++pos].value == "=")
                             {
-                                pos = nextItem(nextItem(pos));
-                                value = (int)convertTyp(1, ref pos);
+                                pos +=2;
+                                value = (int)convertTyp(1, pos++);
                             }
                             enumName[enumIndex] = group + '.' + name;
                             enumValue[enumIndex++] = value;
@@ -231,45 +264,30 @@ namespace GGL.IO
                         break;
                 }
             } while (scope > 0);
+            
         }
 
         private void pharseObjects()
         {
-            int pos = 0;
-            globalPos = 0;
-            while (true)
+            Result.AttributesNumber = attributesIndex;
+            for (int i = 0; i < tokenList.Length; i++)
             {
-                //search next ID
-
-                searchString("<", globalPos);
-                if (globalPos == -1) break;
-
-                nextItem();
-                int startPos = globalPos, pid = -1;
-                string name = getItem();
-                nextItem();
-                if (data[nextItem()] == ':') pid = compareNames(getItem(nextItem()),objectsName);
-
+                if (tokenList[i].value != "<") continue;
+                string name = tokenList[i+1].value;
+                int pid = -1;i += 3;
+                if (tokenList[i].value == ":")
+                {
+                    pid = compareNames(tokenList[i + 1].value, objectsName); i+=2;
+                }
                 objectsName[objectsIndex] = name;
-                results[objectsIndex].Init(startPos, pid);
+                results[objectsIndex].Init(i, pid);
                 objectsIndex++;
             }
-            for (int i = 0; i < 256; i++) pharseObject(i);
-
-            /*
-            for (int i = 0; i < 256; i++)
-            {
-                if (!results[i].Used) continue;
-                Console.WriteLine("\n<objectID " + i+">");
-                for (int ia = 0; ia < attributesLenght; ia++)
-                    Console.WriteLine(attributesName[ia] + " = "+ results[i].AttributesValue[ia]);
-            }
-            */
-
+            for (int i = 0; i < objectsIndex; i++) pharseObject(i);
         }
         private void pharseObject(int id)
         {
-            if (!results[id].Used || results[id].State == 2) return;
+            if (!results[id].Used || results[id].State != 0) return;
 
             results[id].State = 1;
             int pid = results[id].ParentID;
@@ -285,13 +303,16 @@ namespace GGL.IO
                 for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = attributesInitValue[i];
             }
 
-            int pos = searchString("{", results[id].Pos);
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine(tokenList[results[id].Pos].value);
+
+            int pos = results[id].Pos;
             int scope = 0;
             int mode = 0;
             int attri = 0;
             do
             {
-                switch (data[pos])
+                switch (tokenList[pos].value[0])
                 {
                     case '{': scope++; break;
                     case '}': scope--; break;
@@ -301,7 +322,7 @@ namespace GGL.IO
                         switch (mode)
                         {
                             case 0:
-                                attri = compareNames(getItem(pos), attributesName, attributesIndex);
+                                attri = compareNames(tokenList[pos].value, attributesName, attributesIndex);
                                 //if (attri == -1) throw new Exception("Attribute \""+ getItem(pos)+"\" in <"+objectsName[id]+"> not found!");
                                 break;
                             case 1:
@@ -318,8 +339,10 @@ namespace GGL.IO
                         }
                         break;
                 }
-                pos = nextItem(pos);
+                pos++;
             } while (scope == 1);
+            
+
             results[id].State = 2;
         }
     }

@@ -17,7 +17,7 @@ namespace GGL.IO
             attributesIndex = 0;
             attributesTyp = new byte[256];
             attributesName = new string[256];
-            attributesInitValue = new string[256];
+            attributesInitValue = new object[256];
 
             enumIndex = 0;
             enumValue = new int[256];
@@ -29,7 +29,7 @@ namespace GGL.IO
         }
         public string[] GetAttributeNames()
         {
-            Array.Resize(ref attributesName, objectsIndex);
+            Array.Resize(ref attributesName, attributesIndex);
             return attributesName;
         }
         public string[] GetObjectNames()
