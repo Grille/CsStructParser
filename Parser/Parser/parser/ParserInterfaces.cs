@@ -42,7 +42,16 @@ namespace GGL.IO
             enumName[enumIndex] = group + '.' + name;
             enumValue[enumIndex++] = value;
         }
-        
+        public void AddEnum(string group, string[] names)
+        {
+            int value = 0;
+            for (int i = 0; i < names.Length; i++)
+            {
+                enumName[enumIndex] = group + '.' + names[i];
+                enumValue[enumIndex++] = value++;
+            }
+        }
+
         public void AddAttribute(string type,string name,string value)
         {
             byte typ = 0;

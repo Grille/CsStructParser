@@ -1,27 +1,56 @@
 ﻿
-Enum-effect{not, up, down ,break ,deacy ,destroy ,entf}
+enum effect{not, up, down =5,break ,deacy ,destroy ,entf}
+const baum = 6;
+
+struct Point{
+  int x,y;
+}
+struct Str{
+  Point[] point;
+  effect ef;
+}
 
 Attributes{
-  string name;
-  byte[] array1;
+  //Str str = ([(5,8),(2,1)],break);
+  //getAtribute("tree","str.point[].x")
+
+  string name = "fd";
+  byte[] array = [42];
+  int number,number2 = 42;
+  float[] lol = [0,91,8,8],lol2;
+  //effect effect = not
+  number = 66;
+  name = "null";
+  lol2 = [42,2456,3];
 }
 Init{
-  name = "null";
+  name = "gfdhg";
 }
+/*
+object garbage{
+   name = "Garbage";structPath = "../Data/texture/urban/disposal/rubbish";canBuiltOn = [0];
+   AreaPermanent = [(pollution,10,-4)];
+   ResourcesDependent = [(waste,i.min,800,up,0)];
+   ResourcesEffect = [(up,waste,+100)];
+   ResourcesMonthly = [(waste,-10)];
+   upgradeTyp = [0];
+ }
+ */
 
 <tree>{
   name = "tree";
-  array1 = [6,89];
+  array = [10 to 5];
+  number = -88;
 }
 <lol>:tree{
   name = "lol";
-  array1 + [9];
+  array + [20 to 10];
 }
 <0>{
   name = "obj-0";
-  array1 = [1,2];
+  array = [1,2];
 }
 <1>:lol{ //inherits from obj0
   name = "obj-1";
-  array1 + [3,4];
+  array + [3,4];
 }

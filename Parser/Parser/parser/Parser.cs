@@ -147,7 +147,9 @@ namespace GGL.IO
 
         private void pharseAttributes()
         {
-            int index = searchTokenIndex("Attributes")+2;
+            int index = searchTokenIndex("Attributes");
+            if (index == -1) return;
+            index += 2;
             while (tokenList[index].value != "}")
             {
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -195,7 +197,7 @@ namespace GGL.IO
                 else if (tokenList[index + 1].value == "=")
                 {
                     int attri = compareNames(tokenList[index].value, attributesName);
-                    if (attri == -1) throw new Exception("attribute \"" + tokenList[index].value + "\" is not defined");
+                    if (attri == -1) throw new Exception("Attribute \"" + tokenList[index].value + "\" is not defined");
                     index += 2;
                     attributesInitValue[attri] = getValue(ref index, attri);
 
@@ -211,13 +213,15 @@ namespace GGL.IO
         }
         private void pharseInit()
         {
-            int index = searchTokenIndex("Init") + 2;
+            int index = searchTokenIndex("Init");
+            if (index == -1) return;
+            index += 2;
             while (tokenList[index].value != "}")
             {
                 if (tokenList[index + 1].value == "=")
                 {
                     int attri = compareNames(tokenList[index].value, attributesName);
-                    if (attri == -1) throw new Exception("attribute \"" + tokenList[index].value + "\" is not defined");
+                    if (attri == -1) throw new Exception("Attribute \"" + tokenList[index].value + "\" is not defined");
                     index += 2;
                     attributesInitValue[attri] = getValue(ref index, attri);
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -256,7 +260,8 @@ namespace GGL.IO
                             if (tokenList[++pos].value == "=")
                             {
                                 pos +=2;
-                                value = (int)convertTyp(1, pos++);
+                                value = (int)readNativeValue(1, ref pos);
+                                pos++;
                             }
                             enumName[enumIndex] = group + '.' + name;
                             enumValue[enumIndex++] = value;
@@ -306,43 +311,27 @@ namespace GGL.IO
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine(tokenList[results[id].Pos].value);
 
-            int pos = results[id].Pos;
-            int scope = 0;
-            int mode = 0;
-            int attri = 0;
-            do
+            int index = results[id].Pos;
+            index += 1;
+            while (tokenList[index].value != "}")
             {
-                switch (tokenList[pos].value[0])
+                int attri = compareNames(tokenList[index].value, attributesName);
+                if (attri == -1) throw new Exception("Attribute \"" + tokenList[index].value + "\" in <" + objectsName[id] + "> is not defined");
+                index += 2;
+                switch (tokenList[index - 1].value)
                 {
-                    case '{': scope++; break;
-                    case '}': scope--; break;
-                    case '=': mode = 1; break;
-                    case '+': mode = 2; break;
-                    default:
-                        switch (mode)
+                    case "=":
+                        results[id].AttributesValue[attri] = getValue(ref index, attri);
+                        break;
+                    case "+":
+                        if (attributesTyp[attri * 2 + 1] > 0)
                         {
-                            case 0:
-                                attri = compareNames(tokenList[pos].value, attributesName, attributesIndex);
-                                //if (attri == -1) throw new Exception("Attribute \""+ getItem(pos)+"\" in <"+objectsName[id]+"> not found!");
-                                break;
-                            case 1:
-                                results[id].AttributesValue[attri] = getValue(ref pos,attri);
-                                mode = 0;
-                                break;
-                            case 2:
-                                if (attributesTyp[attri * 2 + 1] > 0)
-                                {
-                                    results[id].AttributesValue[attri] = combineArray(attributesTyp[attri * 2],results[id].AttributesValue[attri], getValue(ref pos, attri));
-                                }
-                                mode = 0;
-                                break;
+                            results[id].AttributesValue[attri] = combineArray(attributesTyp[attri * 2], results[id].AttributesValue[attri], getValue(ref index, attri));
                         }
                         break;
                 }
-                pos++;
-            } while (scope == 1);
-            
-
+                index++;
+            }
             results[id].State = 2;
         }
     }

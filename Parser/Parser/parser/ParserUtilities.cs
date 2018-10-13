@@ -70,7 +70,7 @@ namespace GGL.IO
             object retValue = null;
 
             if (array == 0)
-                retValue = convertTyp(typ, pos);
+                retValue = readNativeValue(typ, ref pos);
             else
             {
                 //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
@@ -96,22 +96,28 @@ namespace GGL.IO
                 while (index < size)
                 {
                     pos+=1;
-                    switch (tokenList[pos].value[0])
+                    switch (tokenList[pos].value)
                     {
-                        case '[':case ']':case ',': break;
+                        case "[":case "]":case ",": break;
                         default:
-                            switch (typ)
+                            object value = readNativeValue(typ, ref pos);
+                            if (tokenList[pos + 1].value == "to")
                             {
-                                case 0: ((byte[])retValue)[index++] = (byte)convertTyp(0, pos) ; break;
-                                case 1: ((int[])retValue)[index++] = (int)convertTyp(1, pos); break;
-                                case 2: ((float[])retValue)[index++] = (float)convertTyp(2, pos); break;
-                                case 3: ((double[])retValue)[index++] = (double)convertTyp(3, pos); break;
-                                case 4: ((bool[])retValue)[index++] = (bool)convertTyp(4, pos); break;
-                                case 5: ((string[])retValue)[index++] = (string)convertTyp(5, pos); break;
+                                pos+=2;
+                                int v1 = Convert.ToInt32(value);
+                                int v2 = Convert.ToInt32(readNativeValue(typ, ref pos));
+                                if (v1 < v2)
+                                    for (int i = v1; i <= v2; i++)
+                                        addValueToArray(ref retValue, typ, i, index++);
+                                else
+                                    for (int i = v1; i >= v2; i--)
+                                        addValueToArray(ref retValue, typ, i, index++);
                             }
+                            else addValueToArray(ref retValue, typ, value, index++);
                         break;
                     }
                 }
+
                 pos += 1;
             }
             return retValue;
@@ -143,18 +149,35 @@ namespace GGL.IO
             }
             return TypKind.Other;
         }
-        /*
-        private object convertTyp(int typ, ref int pos)
+
+        private void addValueToArray(ref object array, int typ, object value, int index)
         {
-            if (testKind(getItem(pos))== TypKind.Command)
+            switch (typ)
             {
-                return convertTyp(typ, getItem(pos)+ getItem(pos = nextItem(pos)));
+                case 0: ((byte[])array)[index] = Convert.ToByte(value); break;
+                case 1: ((int[])array)[index] = Convert.ToInt32(value); break;
+                case 2: ((float[])array)[index] = Convert.ToSingle(value); break;
+                case 3: ((double[])array)[index] = Convert.ToDouble(value); break;
+                case 4: ((bool[])array)[index] = Convert.ToBoolean(value); break;
+                case 5: ((string[])array)[index] = (string)value; break;
             }
-            return convertTyp(typ, getItem(pos));
         }
-        */
-        private object convertTyp(int typ,int index)
+        private void readValueToArray(ref object array, int typ, ref int pos,int index)
         {
+            addValueToArray(ref array, typ, readNativeValue(typ, ref pos), index);
+        }
+        private object readNativeValue(int typ, int index)
+        {
+            return readNativeValue(typ, ref index);
+        }
+        private object readNativeValue(int typ,ref int index)
+        {
+            double neg = 1;
+            if (tokenList[index].value == "-")
+            {
+                neg = -1;
+                index++;
+            }
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
             if (typ < 4 && tokenList[index].kind == TypKind.Other)
             {
@@ -162,7 +185,7 @@ namespace GGL.IO
                 switch (typ)
                 {
                     case 0: return (byte)enumValue[indx];
-                    case 1: return enumValue[indx];
+                    case 1: return (int)(enumValue[indx]);
                     case 2: return (float)enumValue[indx];
                     case 3: return (double)enumValue[indx];
                 }
@@ -171,10 +194,10 @@ namespace GGL.IO
             string value = tokenList[index].value;
             switch (typ)
             {
-                case 0: return Convert.ToByte(value);
-                case 1: return Convert.ToInt32(value);
-                case 2: return Convert.ToSingle(value);
-                case 3: return Convert.ToDouble(value);
+                case 0: return (byte)(Convert.ToByte(value) * neg);
+                case 1: return (int)(Convert.ToInt32(value) * neg);
+                case 2: return (float)(Convert.ToSingle(value) * neg);
+                case 3: return (double)(Convert.ToDouble(value) * neg);
                 case 4: return Convert.ToBoolean(value);
                 case 5: return value;
                 default:return null;
@@ -193,6 +216,9 @@ namespace GGL.IO
                         break;
                     case "]":scope--;break;
                     case ",":size++;break;
+                    case "to":
+                        size += Math.Abs((int)readNativeValue(1,index - 1) - (int)readNativeValue(1,index+1));
+                        break;
                 }
                 index++;
             } while (scope > 0);
