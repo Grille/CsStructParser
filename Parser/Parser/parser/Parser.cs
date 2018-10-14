@@ -110,7 +110,7 @@ namespace GGL.IO
                                 //Console.Write(data.Substring(start, end - start + 1)+" ");
 
                                 tokenList[index].value = data.Substring(start, end - start + 1);
-                                tokenList[index].kind = testKind(tokenList[index].value);
+                                tokenList[index].kind = testTypKind(tokenList[index].value);
                                 tokenList[index++].line = curLine;
                             }
                         }
@@ -343,6 +343,8 @@ namespace GGL.IO
                             results[id].AttributesValue[attri] = combineArray(attributesTyp[attri * 2], results[id].AttributesValue[attri], getValue(ref index, attri));
                         }
                         break;
+                    default:
+                        throw new Exception("line " + tokenList[index].line + ": Unexpected token \"" + tokenList[index-1].value + "\" in <" + objectNames[id] + ">");
                 }
                 index++;
             }

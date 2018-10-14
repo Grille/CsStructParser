@@ -7,8 +7,12 @@ namespace GGL.IO
 {
     enum Typ { Byte, Int, Float,  Double, Bool, String, Var};
     enum TypKind { Other, Number, Bool, String,Command};
+
     public partial class Parser
     {
+        char[] commandChars = new char[] { ',', '{', '}', '[', ']', '=', '+', '-', '*', '/', ':', '<', '>', '>' };
+        char[] endChars = new char[] { '\n', ' ', '\r', ';', ';' };
+
         private int searchTokenIndex(string name)
         {
             for (int i = 0;i< tokenList.Length; i++)
@@ -32,7 +36,7 @@ namespace GGL.IO
             }
             return -1;
         }
-        private object getValue(ref int pos, int attrIndex)
+        private object getValue(ref int index, int attrIndex)
         {
 
             int typ = attributesTyp[attrIndex * 2];
@@ -41,11 +45,11 @@ namespace GGL.IO
             object retValue = null;
 
             if (array == 0)
-                retValue = readNativeValue(typ, ref pos);
+                retValue = readNativeValue(typ, ref index);
             else
             {
                 //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-                int size = testArraySize(pos);
+                int size = testArraySize(index);
                 switch (typ)
                 {
                     case 0: retValue = new byte[size];break;
@@ -58,43 +62,43 @@ namespace GGL.IO
                 
                 if (size == 0)
                 {
-                    //pos = nextItem(nextItem(pos));
-                    pos += 1;
+                    index += 1;
                     return retValue;
                 }
                 
                 
-                int index = 0;
-                while (index < size)
+                int arrayIndex = 0;
+                int scope = 1;
+                while (scope > 0)
                 {
-                    pos+=1;
-                    switch (tokenList[pos].value)
+                    index+=1;
+                    switch (tokenList[index].value)
                     {
-                        case "[":case "]":case ",": break;
+                        case "[":scope++; break;
+                        case "]":scope--; break;
+                        case ",": break;
                         default:
-                            object value = readNativeValue(typ, ref pos);
-                            if (tokenList[pos + 1].value == "to")
+                            object value = readNativeValue(typ, ref index);
+                            if (tokenList[index + 1].value == "to")
                             {
-                                pos+=2;
+                                index+=2;
                                 int v1 = Convert.ToInt32(value);
-                                int v2 = Convert.ToInt32(readNativeValue(typ, ref pos));
+                                int v2 = Convert.ToInt32(readNativeValue(typ, ref index));
                                 if (v1 < v2)
                                     for (int i = v1; i <= v2; i++)
-                                        addValueToArray(ref retValue, typ, i, index++);
+                                        addValueToArray(ref retValue, typ, i, arrayIndex++);
                                 else
                                     for (int i = v1; i >= v2; i--)
-                                        addValueToArray(ref retValue, typ, i, index++);
+                                        addValueToArray(ref retValue, typ, i, arrayIndex++);
                             }
-                            else addValueToArray(ref retValue, typ, value, index++);
+                            else addValueToArray(ref retValue, typ, value, arrayIndex++);
                         break;
                     }
                 }
-
-                pos += 1;
             }
             return retValue;
         }
-        private TypKind testKind(string value)
+        private TypKind testTypKind(string value)
         {
             if (value == "true" || value == "false")
                 return TypKind.Bool;

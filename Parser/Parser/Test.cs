@@ -121,7 +121,7 @@ namespace Tests
             testArray<double>("double[]", "[2.6,17.8]", 2.6, 17.8, 2);
             testArray<bool>("bool[]", "[false,true]", false, true, 2);
             testArray<string>("string[]", "[foo,baa]", "foo", "baa", 2);
-            setTest("empty array");//----------------------------------
+            setTest("empty array []");//----------------------------------
             try
             {
                 parser.ParseCode("Attributes{byte[] a = []}<0>{}");
@@ -131,13 +131,13 @@ namespace Tests
             }
             catch (Exception e) { printTest(2, e.Message); }
             parser.Clear();
-            setTest("wtf array");//----------------------------------
+            setTest("interleaved array [[2],4]");//----------------------------------
             try
             {
                 parser.ParseCode("Attributes{byte[] a = [[2],4]}<0>{}");
                 byte[] v = parser.GetAttribute<byte[]>(0, "a");
                 if (v[0] == 2 && v[1]==4) printTest(0);
-                else printTest(1);
+                else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
             }
             catch (Exception e) { printTest(2, e.Message); }
             parser.Clear();
@@ -256,11 +256,11 @@ namespace Tests
             }
             catch (Exception e) { printTest(2, e.Message); }
             parser.Clear();
-            setTest("Object wtf array");//----------------------------------
+            setTest("Object interleaved array");//----------------------------------
             try
             {
 
-                parser.ParseCode("Attributes{byte[]a}<0>{a=[[2]],4}");
+                parser.ParseCode("Attributes{byte[]a}<0>{a=[[2],4]}");
                 byte[] v = parser.GetAttribute<byte[]>(0, "a");
                 if (v[0] == 2 && v[1] == 4 && v.Length == 2) printTest(0);
                 else printTest(1);
