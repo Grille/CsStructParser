@@ -6,14 +6,9 @@ using System.Text;
 namespace GGL.IO
 {
     enum Typ { Byte, Int, Float,  Double, Bool, String, Var};
-    enum TypKind { Other, Number, Bool, Text,Command};
+    enum TypKind { Other, Number, Bool, String,Command};
     public partial class Parser
     {
-
-
-        
-        private int globalPos = 0;
-
         private int searchTokenIndex(string name)
         {
             for (int i = 0;i< tokenList.Length; i++)
@@ -21,26 +16,6 @@ namespace GGL.IO
                 if (tokenList[i].value == name) return i;
             }
             return -1;
-        }
-        private int nextItem()
-        {
-            return nextItem(globalPos);
-        }
-        private int nextItem(int index)
-        {
-            while (data[index++] != '\n') { }
-            globalPos = index;
-            return index;
-        }
-        private string getItem()
-        {
-            return getItem(globalPos);
-        }
-        private string getItem(int index)
-        {
-            string item = "";
-            while (data[index] != '\n') item += data[index++];
-            return item;
         }
         private int compareNames(string name, string[] nameList)
         {
@@ -56,10 +31,6 @@ namespace GGL.IO
                 }
             }
             return -1;
-        }
-        private object getValue(int attrIndex)
-        {
-            return getValue(globalPos);
         }
         private object getValue(ref int pos, int attrIndex)
         {
@@ -88,6 +59,7 @@ namespace GGL.IO
                 if (size == 0)
                 {
                     //pos = nextItem(nextItem(pos));
+                    pos += 1;
                     return retValue;
                 }
                 
@@ -132,7 +104,7 @@ namespace GGL.IO
                 case '5':case '6':case '7':case '8':case '9':
                     return TypKind.Number;
                 case '"':
-                    return TypKind.Text;
+                    return TypKind.String;
                 case '=':case '+':case '-':case '*':case '/':
                 case ',':
                 case '{':
@@ -181,7 +153,8 @@ namespace GGL.IO
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
             if (typ < 4 && tokenList[index].kind == TypKind.Other)
             {
-                int indx = compareNames(tokenList[index].value, enumName, enumIndex);
+                int indx = compareNames(tokenList[index].value, enumNames, enumIndex);
+                if (indx == -1) throw new Exception("line "+tokenList[index].line+": enum \"" + tokenList[index].value + "\" is not defined");
                 switch (typ)
                 {
                     case 0: return (byte)enumValue[indx];
@@ -196,8 +169,8 @@ namespace GGL.IO
             {
                 case 0: return (byte)(Convert.ToByte(value) * neg);
                 case 1: return (int)(Convert.ToInt32(value) * neg);
-                case 2: return (float)(Convert.ToSingle(value) * neg);
-                case 3: return (double)(Convert.ToDouble(value) * neg);
+                case 2: return (float)(Convert.ToSingle(value.Replace('.',',').TrimEnd('f')) * neg);
+                case 3: return (double)(Convert.ToDouble(value.Replace('.', ',').TrimEnd('d')) * neg);
                 case 4: return Convert.ToBoolean(value);
                 case 5: return value;
                 default:return null;
@@ -246,40 +219,6 @@ namespace GGL.IO
             array2.CopyTo(array, array1.Length);
             return array;
         }
-
-        private bool testString(int pos, string input)
-        {
-            return testString(pos, input.ToCharArray());
-        }
-        private bool testString(int pos, char[] input)
-        {
-            if (pos + input.Length > length) return false;
-            for (int i = 0; i < input.Length; i++)
-            {
-                if (data[pos + i] != input[i]) return false;
-            }
-            return true;
-        }
-        private int searchString(string input)
-        {
-            return searchString(input,0, length);
-        }
-        private int searchString(string input,int min)
-        {
-            return searchString(input, min, length);
-        }
-        private int searchString(string input,int min, int max)
-        {
-            for (int i = min; i < max; i++)
-            {
-                if (testString(i, input))
-                {
-                    globalPos = i;
-                    return i;
-                }
-            }
-            globalPos = -1;
-            return -1;
-        }
+       
     }
 }

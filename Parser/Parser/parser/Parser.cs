@@ -1,29 +1,27 @@
 ﻿using System.IO;
 using System;
 using System.Threading;
+using System.Reflection;
 namespace GGL.IO
 {
-    public partial class Parser
+    public unsafe partial class Parser
     {
         const int con = 9,h=8;
         enum enu { gg,dd,rr};
 
-        private int length = 0;
-        private char[] data;
         Token[] tokenList;
-
 
         byte attributesIndex;
         byte objectsIndex;
 
         byte[] attributesTyp;
         string[] attributesName;
-        string[] objectsName;
+        string[] objectNames;
         Object[] attributesInitValue;
 
         int enumIndex;
         int[] enumValue;
-        string[] enumName;
+        string[] enumNames;
 
         Result[] results;
 
@@ -32,10 +30,9 @@ namespace GGL.IO
             Clear();
         }
 
-        private void parse()
+        private void parse(string data)
         {
-            deleteComments();
-            prepare();
+            readToTokenList(data);
 
             pharseAttributes();
             pharseInit();
@@ -43,54 +40,104 @@ namespace GGL.IO
             pharseObjects();
         }
 
-        private void prepare()
+        private void readToTokenList(string data)
         {
-            int iSrc, iDst = 0, iEnd;
-            bool stringMode = false;
-            char[] dstData = new char[data.Length * 2];
-            //Console.BackgroundColor = ConsoleColor.DarkGray;
-            //normalize ends, isolate operators
-            for (iSrc = 0; iSrc < length; iSrc++)
+            tokenList = new Token[data.Length];
+            int index = 0;
+            int curLine = 1;
+            int commentMode = 0;
+            for (int i = 0; i < data.Length; i++)
             {
-                if (data[iSrc] == '"') stringMode = !stringMode;
-
-                if (stringMode) dstData[iDst++] = data[iSrc];
-                else if (data[iSrc] == ' ' || data[iSrc] == '\r' || data[iSrc] == ';' || data[iSrc] == ';') dstData[iDst++] = '\n'; 
-                else if (data[iSrc] == ',' || data[iSrc] == '{' || data[iSrc] == '}' || data[iSrc] == '[' || data[iSrc] == ']' || data[iSrc] == '=' || data[iSrc] == '+' || data[iSrc] == '-' || data[iSrc] == '*' || data[iSrc] == '/' || data[iSrc] == ':' || data[iSrc] == '<' || data[iSrc] == '>' || data[iSrc] == ';')
+                if (data[i] == '\n')
+                    curLine++;
+                if (commentMode == 0)
                 {
-                    dstData[iDst++] = '\n';
-                    dstData[iDst++] = data[iSrc];
-                    dstData[iDst++] = '\n';
+                    if (data[i] == '/' && data[i + 1] == '/') commentMode = 1;
+                    else if (data[i] == '/' && data[i + 1] == '*') commentMode = 2;
+                    else
+                    {
+                        if (data[i] == '"')
+                        {
+                            i += 1;
+                            int start = i, end = 0;
+                            while (data[i] != '"')
+                            {
+                                end = i++;
+                                if (data[i] == '\n')
+                                    curLine++;
+                            }
+                            i += 1;
+                            //Console.ForegroundColor = ConsoleColor.Red;
+                            //Console.Write(data.Substring(start, end- start+1));
+
+                            tokenList[index].line = curLine;
+                            tokenList[index].kind = TypKind.String;
+                            if (end != 0)
+                                tokenList[index++].value = data.Substring(start, end - start + 1);
+                            else
+                                tokenList[index++].value = "";
+
+                        }
+                        else if (data[i] == ',' || data[i] == '{' || data[i] == '}' || data[i] == '[' || data[i] == ']' || data[i] == '=' || data[i] == '+' || data[i] == '-' || data[i] == '*' || data[i] == '/' || data[i] == ':' || data[i] == '<' || data[i] == '>'|| data[i] == '>')
+                        {
+                            //Console.ForegroundColor = ConsoleColor.Blue;
+                            //Console.Write(data[i]);
+                            tokenList[index].line = curLine;
+                            tokenList[index].kind = TypKind.Command;
+                            tokenList[index++].value = ""+data[i];
+                        }
+                        else if (data[i] == '\n' || data[i] == ' ' || data[i] == '\r' || data[i] == ';' || data[i] == ';')
+                        {
+                            /*
+                            Console.BackgroundColor = ConsoleColor.DarkRed;
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write(data[i]);
+                            Console.BackgroundColor = ConsoleColor.Black;
+                            Console.ForegroundColor = ConsoleColor.Gray;
+                            */
+                        }
+                        else
+                        {
+                            int start = i, end = 0;
+                            while ((data[i] >= 65 && data[i] <= 90) || (data[i] >= 97 && data[i] <= 122) || (data[i] >= 48 && data[i] <= 57) || data[i] == 95 || data[i] == 46)
+                            {
+                                end = i++;
+                            }
+                            i -= 1;
+                            if (end!=0)
+                            {
+                                //Console.ForegroundColor = ConsoleColor.Gray;
+                                //Console.Write(data.Substring(start, end - start + 1)+" ");
+
+                                tokenList[index].value = data.Substring(start, end - start + 1);
+                                tokenList[index].kind = testKind(tokenList[index].value);
+                                tokenList[index++].line = curLine;
+                            }
+                        }
+                            
+                            /*
+                                stringMode = !stringMode;
+
+                            if (stringMode) dstData[iDst++] = data[iSrc];
+                            else if (data[iSrc] == ' ' || data[iSrc] == '\r' || data[iSrc] == ';' || data[iSrc] == ';') dstData[iDst++] = '\n';
+                            else if (data[iSrc] == ',' || data[iSrc] == '{' || data[iSrc] == '}' || data[iSrc] == '[' || data[iSrc] == ']' || data[iSrc] == '=' || data[iSrc] == '+' || data[iSrc] == '-' || data[iSrc] == '*' || data[iSrc] == '/' || data[iSrc] == ':' || data[iSrc] == '<' || data[iSrc] == '>' || data[iSrc] == ';')
+                            {
+                                dstData[iDst++] = '\n';
+                                dstData[iDst++] = data[iSrc];
+                                dstData[iDst++] = '\n';
+                            }
+                            else dstData[iDst++] = data[iSrc];
+                            */
+
+                    }
                 }
-                else dstData[iDst++] = data[iSrc];
+                else if (commentMode == 1 && data[i] == '\n') commentMode = 0;
+                else if (commentMode == 2 && data[i] == '*' && data[i + 1] == '/') { commentMode = 0; i++; }
             }
-            data = dstData;
+            Array.Resize(ref tokenList, index);
 
-            //collapse ends
-            iEnd = iDst; iDst = 0;
-            for (iSrc = 0; iSrc <= iEnd; iSrc++)
-            {
-                if (data[iSrc] == '"') stringMode = !stringMode;
-                if (stringMode || data[iSrc] != '\n' || data[iSrc + 1] != '\n') data[iDst++] = data[iSrc];
-            }
-            length = iDst;
-
-            //Array.Resize(ref data, length);
-
-            int tokenCount = 0;
-            for (int i = 0;i< length; i++)
-            {
-                if (data[i] == '\n') tokenCount++;
-            }
-            tokenList = new Token[tokenCount];
-            nextItem(0);
-            for (int i = 0;i< tokenCount; i++)
-            {
-                tokenList[i].value = getItem();
-                tokenList[i].kind = testKind(tokenList[i].value);
-                tokenList[i].line = i;
-                nextItem();
-            }
+            /*
+            Console.WriteLine(tokenList.Length);
             for (int i = 0; i < tokenList.Length; i++)
             {
                 switch (tokenList[i].kind)
@@ -101,49 +148,19 @@ namespace GGL.IO
                     case TypKind.Number:
                         Console.ForegroundColor = ConsoleColor.Green;
                         break;
-                    case TypKind.Text:
+                    case TypKind.String:
                         Console.ForegroundColor = ConsoleColor.Red;
                         break;
                     default:
                         Console.ForegroundColor = ConsoleColor.Gray;
                         break;
                 }
-                Console.Write(tokenList[i].value+" ");
-            }
-
-            Console.WriteLine(tokenCount);
-            //for (int i = 0)
-            /*
-            while (true)
-            {
-                Console.WriteLine(getItem());
-                nextItem();
+                Console.Write(tokenList[i].value + " ");
             }
             */
+            
         }
-        private void deleteComments()
-        {
-            int commentMode = 0;
-            int iDst = 0;
-            int newLenght = 0;
-            for (int iSrc = 0; iSrc < length; iSrc++)
-            {
-                if (commentMode == 0)
-                {
-                    if (data[iSrc] == '/' && data[iSrc + 1] == '/') commentMode = 1;
-                    else if (data[iSrc] == '/' && data[iSrc + 1] == '*') commentMode = 2;
-                    else
-                    {
-                        data[iDst] = data[iSrc];
-                        iDst++;
-                        newLenght++;
-                    }
-                }
-                else if (commentMode == 1 && data[iSrc] == '\n') commentMode = 0;
-                else if (commentMode == 2 && data[iSrc] == '*' && data[iSrc + 1] == '/') { commentMode = 0; iSrc++; }
-            }
-            length = newLenght;
-        }
+
 
         private void pharseAttributes()
         {
@@ -152,7 +169,7 @@ namespace GGL.IO
             index += 2;
             while (tokenList[index].value != "}")
             {
-                Console.ForegroundColor = ConsoleColor.Green;
+                //Console.ForegroundColor = ConsoleColor.Green;
                 byte array = 0;
                 string type;
                 if (tokenList[index + 1].value != "=")
@@ -190,7 +207,7 @@ namespace GGL.IO
                         }
                         attributesIndex++;
 
-                        Console.WriteLine(type + "[" + array + "]->" + name + (value != null ? ("=" + value) : "") + ";");
+                        //Console.WriteLine(type + "[" + array + "]->" + name + (value != null ? ("=" + value) : "") + ";");
                     } while (tokenList[index + 1].value == ",");
 
                 }
@@ -201,15 +218,15 @@ namespace GGL.IO
                     index += 2;
                     attributesInitValue[attri] = getValue(ref index, attri);
 
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(attributesName[attri]+"="+attributesInitValue[attri]+";");
+                    //Console.ForegroundColor = ConsoleColor.Red;
+                    //Console.WriteLine(attributesName[attri]+"="+attributesInitValue[attri]+";");
                 }
 
-                Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine(tokenList[index].value);
+                //Console.ForegroundColor = ConsoleColor.Blue;
+                //Console.WriteLine(tokenList[index].value);
                 index++;
             }
-            Console.WriteLine("attributesIndex " + attributesIndex);
+            //Console.WriteLine("attributesIndex " + attributesIndex);
         }
         private void pharseInit()
         {
@@ -221,11 +238,11 @@ namespace GGL.IO
                 if (tokenList[index + 1].value == "=")
                 {
                     int attri = compareNames(tokenList[index].value, attributesName);
-                    if (attri == -1) throw new Exception("Attribute \"" + tokenList[index].value + "\" is not defined");
+                    if (attri == -1) throw new Exception("line " + tokenList[index].line + ": Attribute \"" + tokenList[index].value + "\" is not defined");
                     index += 2;
                     attributesInitValue[attri] = getValue(ref index, attri);
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(attributesName[attri] + "=" + attributesInitValue[attri] + ";");
+                    //Console.ForegroundColor = ConsoleColor.Red;
+                    //Console.WriteLine(attributesName[attri] + "=" + attributesInitValue[attri] + ";");
                 }
                 index++;
             }
@@ -263,7 +280,7 @@ namespace GGL.IO
                                 value = (int)readNativeValue(1, ref pos);
                                 pos++;
                             }
-                            enumName[enumIndex] = group + '.' + name;
+                            enumNames[enumIndex] = group + '.' + name;
                             enumValue[enumIndex++] = value;
                         }
                         break;
@@ -279,12 +296,12 @@ namespace GGL.IO
             {
                 if (tokenList[i].value != "<") continue;
                 string name = tokenList[i+1].value;
-                int pid = -1;i += 3;
+                string pid = null;i += 3;
                 if (tokenList[i].value == ":")
                 {
-                    pid = compareNames(tokenList[i + 1].value, objectsName); i+=2;
+                    pid = tokenList[i + 1].value; i+=2;
                 }
-                objectsName[objectsIndex] = name;
+                objectNames[objectsIndex] = name;
                 results[objectsIndex].Init(i, pid);
                 objectsIndex++;
             }
@@ -292,14 +309,14 @@ namespace GGL.IO
         }
         private void pharseObject(int id)
         {
-            if (!results[id].Used || results[id].State != 0) return;
+            if (results[id].State != 0) return;
 
             results[id].State = 1;
-            int pid = results[id].ParentID;
+            string parent = results[id].ParentName;
 
-            //valid referral
-            if (pid != -1 && results[pid].Used)
+            if (parent != null)
             {
+                int pid = compareNames(parent, objectNames);
                 pharseObject(pid);
                 for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = results[pid].AttributesValue[i];
             }
@@ -308,15 +325,12 @@ namespace GGL.IO
                 for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = attributesInitValue[i];
             }
 
-            Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine(tokenList[results[id].Pos].value);
-
             int index = results[id].Pos;
             index += 1;
             while (tokenList[index].value != "}")
             {
                 int attri = compareNames(tokenList[index].value, attributesName);
-                if (attri == -1) throw new Exception("Attribute \"" + tokenList[index].value + "\" in <" + objectsName[id] + "> is not defined");
+                if (attri == -1) throw new Exception("line " + tokenList[index].line + ": Attribute \"" + tokenList[index].value + "\" in <" + objectNames[id] + "> is not defined");
                 index += 2;
                 switch (tokenList[index - 1].value)
                 {

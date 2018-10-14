@@ -7,23 +7,21 @@ namespace GGL.IO
 {
     struct Result
     {
-        public bool Used;
         public int Pos;
         public static int AttributesNumber;
         public int State;
-        public int ParentID;
+        public string ParentName;
         public object[] AttributesValue;
 
         public void Init(int pos)
         {
-            Init(pos,-1);
+            Init(pos,null);
         }
-        public void Init(int pos,int parent)
+        public void Init(int pos,string parent)
         {
             Pos = pos;
-            ParentID = parent;
+            ParentName = parent;
             State = 0;
-            Used = true;
             AttributesValue = new object[AttributesNumber];
         }
     }

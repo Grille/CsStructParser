@@ -1,20 +1,10 @@
 ﻿
-enum effect{not, up, down =5,break ,deacy ,destroy ,entf}
-const baum = 6;
-
-struct Point{
-  int x,y;
-}
-struct Str{
-  Point[] point;
-  effect ef;
-}
 
 Attributes{
   //Str str = ([(5,8),(2,1)],break);
   //getAtribute("tree","str.point[].x")
 
-  string name = "fd";
+  string name = "fd lol@hallodu sau";
   byte[] array = [42];
   int number,number2 = 42;
   float[] lol = [0,91,8,8],lol2;

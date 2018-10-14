@@ -10,7 +10,7 @@ namespace GGL.IO
         }
         public bool Exists(string name)
         {
-            return compareNames(name,objectsName) != -1;
+            return compareNames(name,objectNames) != -1;
         }
         public void Clear()
         {
@@ -21,9 +21,10 @@ namespace GGL.IO
 
             enumIndex = 0;
             enumValue = new int[256];
-            enumName = new string[256];
+            enumNames = new string[256];
 
-            objectsName = new string[256];
+            objectsIndex = 0;
+            objectNames = new string[256];
 
             results = new Result[256];
         }
@@ -34,12 +35,12 @@ namespace GGL.IO
         }
         public string[] GetObjectNames()
         {
-            Array.Resize(ref objectsName, objectsIndex);
-            return objectsName;
+            Array.Resize(ref objectNames, objectsIndex);
+            return objectNames;
         }
         public void AddEnum(string group,string name,int value)
         {
-            enumName[enumIndex] = group + '.' + name;
+            enumNames[enumIndex] = group + '.' + name;
             enumValue[enumIndex++] = value;
         }
         public void AddEnum(string group, string[] names)
@@ -47,7 +48,7 @@ namespace GGL.IO
             int value = 0;
             for (int i = 0; i < names.Length; i++)
             {
-                enumName[enumIndex] = group + '.' + names[i];
+                enumNames[enumIndex] = group + '.' + names[i];
                 enumValue[enumIndex++] = value++;
             }
         }
@@ -75,31 +76,21 @@ namespace GGL.IO
         {
             return GetAttribute<T>("" + number, name);
         }
-        public T GetAttribute<T>(string objectname,string name)
+        public T GetAttribute<T>(string objectName,string name)
         {
-            int obj = compareNames(objectname, objectsName);
-            if (obj == -1) return default(T);
-            if (!results[obj].Used) return default(T);
+            int obj = compareNames(objectName, objectNames);
+            if (obj == -1) throw new Exception("Object <"+ objectName+"> not defined");
             int attri = compareNames(name, attributesName);
+            if (attri == -1) throw new Exception("Attribute <" + name + "> not declared");
             return (T)results[obj].AttributesValue[attri];
         }
         public void ParseFile(string path)
         {
-            data = File.ReadAllText(path).ToCharArray();
-            length = data.Length;
-
-            parse();
+            parse(File.ReadAllText(path));
         }
         public void ParseCode(string code)
         {
-            data = code.ToCharArray();
-            length = data.Length;
-
-            parse();
-        }
-        public string GetData()
-        {
-            return new string(data);
+            parse(code);
         }
     }
 }

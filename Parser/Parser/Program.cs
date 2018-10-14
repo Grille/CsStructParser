@@ -36,15 +36,17 @@ namespace Programm
     {
         unsafe private static void Main(string[] args)
         {
-            //Test test = new Test();
-            //test.Run();
+            Test tests = new Test();
+            tests.Run();
             
+            /*
             string h = ""+67;
             Parser parser = new Parser();
             //parser.AddAttribute("int[]", "test2", "0");
             parser.AddEnum("res", "waste", 3);
             //parser.ParseCode("Attributes{string name;int test;}Init{name = \"null\";test = 0;}");
-            parser.ParseFile("../../testCodeAttr.txt");
+            parser.AddEnum("holly", new string[] { "fuck", "luck", "tree" });
+            parser.ParseFile("../testCodeAttr.txt");
             parser.Exists(6);
 
             Console.ForegroundColor = ConsoleColor.Gray;
