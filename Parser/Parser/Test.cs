@@ -14,90 +14,55 @@ namespace Tests
         private string text;
         public void Run()
         {
+            int[] a1 = new int []{ 2, 3};
+            int[] a2 = new int[] { 2, 3};
+            Console.WriteLine(a1.Equals(a2));
             Console.WriteLine("Run tests...\n");
 
             parser = new Parser();
             
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             Console.WriteLine("\nBasic tests");
-            setTest("Add attribute");//----------------------------------
-            try
+            test("Add attribute", () =>
             {
-                parser.AddAttribute("byte", "name", "0");
-                if (parser.GetAttributeNames()[0] == "name") printTest(0);
+                parser.AddAttribute("byte", "v", "0");
+                if (parser.GetAttributeNames()[0] == "v") printTest(0);
                 else printTest(1);
-            }
-            
-            catch (Exception e){printTest(2, e.Message);}
-            parser.Clear();
-            setTest("Declare attribute: int v");//----------------------------------
-            try
+            });
+            test("Declare attribute: int v", () =>
             {
                 parser.ParseCode("Attributes{byte name}");
                 if (parser.GetAttributeNames()[0] == "name") printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e){printTest(2,e.Message);}
-            parser.Clear();
-            setTest("Declare attribute list: int x,y");//----------------------------------
-            try
+            });
+
+            test("Declare attribute list: int x,y", () =>
             {
                 parser.ParseCode("Attributes{byte foo,baa}");
                 if (parser.GetAttributeNames()[1] == "baa") printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Declare objects by id: <0>{}");//----------------------------------
-            try
+            });
+            test("Declare objects by id: <0>{}", () =>
             {
                 parser.ParseCode("Attributes{}<0>{}");
                 if (parser.Exists(0)) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e){printTest(2, e.Message);}
-            parser.Clear();
-            setTest("Declare objects by name: <name>{}");//----------------------------------
-            try
+            });
+            test("Declare objects by name: <name>{}", () =>
             {
                 parser.ParseCode("Attributes{}<foo>{}");
                 if (parser.Exists("foo")) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Define attribute: v=2");//----------------------------------
-            try
-            {
-                parser.ParseCode("Attributes{int v v=2}<0>{}");
-                if (parser.GetAttribute<int>(0, "v") == 2) printTest(0);
-                else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Declare & Define attribute: int v=2");//----------------------------------
-            try
-            {
-                parser.ParseCode("Attributes{byte b=8}<0>{}");
-                if (parser.GetAttribute<byte>(0, "b") == 8) printTest(0);
-                else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Implizit attribute definition: int v");//----------------------------------
-            try
-            {
-                parser.ParseCode("Attributes{byte v}<0>{}");
-                if (parser.GetAttribute<byte>(0, "v") == 0) printTest(0);
-                else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
+            });
+            testSingleValue<int>("Define attribute: v=2", "Attributes{int v v=2}<0>{}", 0, 2);
+            testSingleValue<byte>("Declare & Define attribute: int v=2", "Attributes{byte v=8}<0>{}", 0, 8);
+            testSingleValue<byte>("Implizit attribute definition: int v", "Attributes{byte v}<0>{}", 0, 0);
 
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             Console.WriteLine("\nType tests");
             testType<byte>("byte", "16", 16);
             testType<int>("int", "42", 42);
+            testType<int>("int", "+42", +42);
             testType<int>("int", "-42", -42);
             testType<float>("float", "1.23", 1.23f);
             testType<float>("float", "-1.23", -1.23f);
@@ -107,6 +72,7 @@ namespace Tests
             testType<double>("double","2.46d", 2.46d);
             testType<bool>("bool", "false", false);
             testType<bool>("bool", "true", true);
+            testType<bool>("bool", "0", false);
             testType<string>("string", "\"test\"", "test");
             testType<string>("string", "\"\"", "");
 
@@ -121,200 +87,201 @@ namespace Tests
             testArray<double>("double[]", "[2.6,17.8]", 2.6, 17.8, 2);
             testArray<bool>("bool[]", "[false,true]", false, true, 2);
             testArray<string>("string[]", "[foo,baa]", "foo", "baa", 2);
-            setTest("empty array []");//----------------------------------
-            try
+            test("empty array []", () =>
             {
                 parser.ParseCode("Attributes{byte[] a = []}<0>{}");
                 byte[] v = parser.GetAttribute<byte[]>(0, "a");
-                if (v!= null&&v.Length==0) printTest(0);
+                if (v != null && v.Length == 0) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("interleaved array [[2],4]");//----------------------------------
-            try
+            });
+            test("interleaved array [[2],4]", () =>
             {
                 parser.ParseCode("Attributes{byte[] a = [[2],4]}<0>{}");
                 byte[] v = parser.GetAttribute<byte[]>(0, "a");
-                if (v[0] == 2 && v[1]==4) printTest(0);
+                if (v[0] == 2 && v[1] == 4) printTest(0);
                 else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("multiple arrays");//----------------------------------
-            try
+            });
+            test("multiple arrays", () =>
             {
                 parser.ParseCode("Attributes{byte[] a = [1] int[] x = [],y=[2 to 6]}<0>{}");
                 int[] v = parser.GetAttribute<int[]>(0, "y");
                 if (v != null && v.Length == 5) printTest(0);
-                else printTest(1,""+v.Length);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
+                else printTest(1, "" + v.Length);
+            });
 
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             Console.WriteLine("\nEnum tests");
-            setTest("Add/use single enum");//----------------------------------
-            try
+
+            test("Add/use single enum", () =>
             {
-                parser.AddEnum("e", "x",5);
+                parser.AddEnum("e", "x", 5);
                 parser.ParseCode("Attributes{int v=e.x}<0>{}");
                 if (parser.GetAttribute<int>(0, "v") == 5) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Add/use enum list");//----------------------------------
-            try
+            });
+            test("Add/use enum list", () =>
             {
                 parser.AddEnum("e", new string[] { "x", "y" });
-
                 parser.ParseCode("Attributes{int x=e.x,y=e.y}<0>{}");
                 if (parser.GetAttribute<int>(0, "x") == 0 && parser.GetAttribute<int>(0, "y") == 1) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Define/use enum: enum e{x,y}");//----------------------------------
-            try
+            });
+
+            test("Define enum: enum e{x,y}", () =>
             {
                 parser.ParseCode("enum e{x,y} Attributes{int x=e.x,y=e.y}<0>{}");
                 if (parser.GetAttribute<int>(0, "x") == 0 && parser.GetAttribute<int>(0, "y") == 1) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Define/use enum: enum e{x=8,y=-4}");//----------------------------------
-            try
+            });
+            test("Define enum: enum e{x=8,y=-4}", () =>
             {
                 parser.ParseCode("enum e{x=8,y=-4} Attributes{int x=e.x,y=e.y}<0>{}");
                 if (parser.GetAttribute<int>(0, "x") == 8 && parser.GetAttribute<int>(0, "y") == -4) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-
+            });
+            test("Define multiple enums: enum e{x} enum v{y}", () =>
+            {
+                parser.ParseCode("enum e{x=2} enum v{y=4} Attributes{int x=e.x,y=v.y}<0>{}");
+                if (parser.GetAttribute<int>(0, "x") == 2 && parser.GetAttribute<int>(0, "y") == 4) printTest(0);
+                else printTest(1, parser.GetAttribute<int>(0, "x") + ":" + parser.GetAttribute<int>(0, "y"));
+            });
+            
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             Console.WriteLine("\nObject tests");
-            setTest("Define object");//----------------------------------
-            try
+            test("Define object", () =>
             {
                 parser.ParseCode("Attributes{int x,y}<0>{x=4 y=8}");
                 if (parser.GetAttribute<int>(0, "x") == 4 && parser.GetAttribute<int>(0, "y") == 8) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Define multiple objects");//----------------------------------
-            try
+            });
+            test("Define multiple objects", () =>
             {
                 parser.ParseCode("Attributes{int v}<0>{v=1}<1>{v=2}");
                 if (parser.GetAttribute<int>(0, "v") == 1 && parser.GetAttribute<int>(1, "v") == 2) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Object inheritance: foo.x=42 baa.x:foo.x");//----------------------------------
-            try
+            });
+            test("Object inheritance: foo.x=42 baa.x:foo.x", () =>
             {
                 parser.ParseCode("Attributes{byte x=0}<1>{x=42}<0>:1{}");
                 int v = parser.GetAttribute<byte>(0, "x");
                 if (v == 42) printTest(0);
                 else printTest(1, "" + v);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Object inheritance: baa.x:foo.x foo.x=42");//----------------------------------
-            try
+            });
+            test("Object inheritance: baa.x:foo.x foo.x=42", () =>
             {
                 parser.ParseCode("Attributes{byte x=0}<0>:1{}<1>{x=42}");
                 int v = parser.GetAttribute<byte>(0, "x");
                 if (v == 42) printTest(0);
                 else printTest(1, "" + v);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Object array");//----------------------------------
-            try
+            });
+            test("Object array", () =>
             {
-
                 parser.ParseCode("Attributes{byte[]a}<0>{a=[2,4]}");
                 byte[] v = parser.GetAttribute<byte[]>(0, "a");
                 if (v[0] == 2 && v[1] == 4) printTest(0);
                 else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Object empty array");//----------------------------------
-            try
+            });
+            test("Object empty array", () =>
             {
-                
                 parser.ParseCode("Attributes{byte[]a}<0>{a=[]}");
                 byte[] v = parser.GetAttribute<byte[]>(0, "a");
                 if (v != null && v.Length == 0) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Object interleaved array");//----------------------------------
-            try
+            });
+            test("Object enclosed array", () =>
             {
-
+                parser.ParseCode("Attributes{int v byte[]a}<0>{v=2 a=[1,3,6]v=1}");
+                byte[] v = parser.GetAttribute<byte[]>(0, "a");
+                if (v[1] == 3 && v.Length == 3) printTest(0);
+                else printTest(1);
+            });
+            test("Object interleaved array", () =>
+            {
                 parser.ParseCode("Attributes{byte[]a}<0>{a=[[2],4]}");
                 byte[] v = parser.GetAttribute<byte[]>(0, "a");
                 if (v[0] == 2 && v[1] == 4 && v.Length == 2) printTest(0);
                 else printTest(1);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
-            setTest("Object array inheritance: foo:array+baa.array");//----------------------------------
+            });
+            test("Object array inheritance: foo:array+baa.array", () =>
+             {
+                 parser.ParseCode("Attributes{byte[]a=[2]}<0>{a+[4]}");
+                 byte[] v = parser.GetAttribute<byte[]>(0, "a");
+                 if (v[0] == 2 && v[1] == 4) printTest(0);
+                 else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+             });
+            //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            Console.WriteLine("\nException tests");
+            testExeption("circular reference", "Attributes{}<0>:1{}<1>:0{}", null);
+            testExeption("heritage from undefined", "Attributes{}<0>:1{}", null);
+            testExeption("undeclared attribute access", "Attributes{v=0;}<0>{}", null);
+            testExeption("incompatible value", "Attributes{int v=\"x\";}<0>{}", null);
+        }
+
+        private void test(string name, Action method)
+        {
+            text = name;
             try
             {
-                parser.ParseCode("Attributes{byte[]a=[2]}<0>{a+[4]}");
-                byte[] v = parser.GetAttribute<byte[]>(0, "a");
-                if (v[0] == 2 && v[1] == 4) printTest(0);
-                else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+                method();
             }
             catch (Exception e) { printTest(2, e.Message); }
             parser.Clear();
         }
-
+        private void testSingleValue<T>(string name, string code, int id, T expect)
+        {
+            test(name, () =>
+            {
+                parser.ParseCode(code);
+                if (Convert.ToString(parser.GetAttribute<T>(id, "v")) == Convert.ToString(expect)) printTest(0);
+                else printTest(1);
+            });
+        }
 
         private void testType<T>(string typ,string num,T expect)
         {
-            setTest(typ+" "+num);
-            try
+            test(typ + " " + num, () =>
             {
-                parser.ParseCode("Attributes{"+ typ + " v=" + num + "}<0>{}");
+                parser.ParseCode("Attributes{" + typ + " v=" + num + "}<0>{}");
                 T v = (T)parser.GetAttribute<T>(0, "v");
-                
                 if (Convert.ToString(v) == Convert.ToString(expect))
                     printTest(0);
                 else
                     printTest(1, "" + v);
-            }
-            catch (Exception e) { printTest(2, e.Message); }
-            parser.Clear();
+            });
         }
         private void testArray<T>(string typ, string num, T expect0,T expect1,int length)
         {
-            setTest(typ + " " + num);
-            try
+            test(typ + " " + num, () =>
             {
                 parser.ParseCode("Attributes{" + typ + " v=" + num + "}<0>{}");
                 T[] v = parser.GetAttribute<T[]>(0, "v");
                 if (Convert.ToString(v[0]) == Convert.ToString(expect0) && Convert.ToString(v[1]) == Convert.ToString(expect1) && v.Length == length)
                     printTest(0);
                 else
-                    printTest(1, "[" + v[0]+","+v[1]+"]."+ v.Length);
+                    printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+            });
+        }
+
+        private void testExeption(string name,string code,string expect)
+        {
+            text = name;
+            try
+            {
+                parser.ParseCode(code);
+                printTest(1);
             }
-            catch (Exception e) { printTest(2, e.Message); }
+            catch (Exception e)
+            {
+                if (expect != null)
+                    if (e.Message.ToLower() == ("line 1: " + expect).ToLower()) printTest(0);
+                    else printTest(2, e.Message);
+                else if (e.Message.ToLower().Contains("line 1:")) printTest(0, e.Message);
+                else printTest(2, e.Message);
+
+            }
             parser.Clear();
         }
-        private void setTest(string text)
-        {
-            this.text = text;
-        }
+
         private void printTest(int state)
         {
             printTest(state, null);

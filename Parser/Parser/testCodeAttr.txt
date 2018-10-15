@@ -1,6 +1,18 @@
 ﻿
+enum Enum{a=2,b=9}
+struct Point{
+  int x,y
+}
+struct Str
+{
+  int number;
+  Point point;
+}
 
 Attributes{
+  //Str str = (4,(2,7))
+
+  //Rectangle rect = ((0,0),(0,0))
   //Str str = ([(5,8),(2,1)],break);
   //getAtribute("tree","str.point[].x")
 

@@ -53,23 +53,12 @@ namespace GGL.IO
             }
         }
 
+        public void AddAttribute<T>(string name, T value)
+        {
+        }
         public void AddAttribute(string type,string name,string value)
         {
-            byte typ = 0;
-            //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-            if (type[0] == 'b' && type[0 + 1] == 'y') typ = 0;
-            else if (type[0] == 'i') typ = 1;
-            else if (type[0] == 'f') typ = 2;
-            else if (type[0] == 'd') typ = 3;
-            else if (type[0] == 'b' && type[0 + 1] == 'o') typ = 4;
-            else if (type[0] == 's') typ = 5;
-            else if (type[0] == 'v') typ = 6;
-
-            attributesTyp[attributesIndex * 2] = typ;
-            attributesTyp[attributesIndex * 2 + 1] = (byte)(type.Contains("[") ? 1 : 0);
-            attributesName[attributesIndex] = name;
-            attributesInitValue[attributesIndex] = value;
-            attributesIndex++;
+            parse("Attributes{"+ type + " "+name+ (value.Length>0?"=" +value:"")+"}");
         }
 
         public T GetAttribute<T>(int number, string name)
@@ -79,9 +68,9 @@ namespace GGL.IO
         public T GetAttribute<T>(string objectName,string name)
         {
             int obj = compareNames(objectName, objectNames);
-            if (obj == -1) throw new Exception("Object <"+ objectName+"> not defined");
+            if (obj == -1) throw new Exception("Object <"+ objectName+"> is not defined");
             int attri = compareNames(name, attributesName);
-            if (attri == -1) throw new Exception("Attribute <" + name + "> not declared");
+            if (attri == -1) throw new Exception("Attribute <" + name + "> is not declared");
             return (T)results[obj].AttributesValue[attri];
         }
         public void ParseFile(string path)

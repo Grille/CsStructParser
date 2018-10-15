@@ -5,7 +5,7 @@ using System.Text;
 
 namespace GGL.IO
 {
-    enum Typ { Byte, Int, Float,  Double, Bool, String, Var};
+    enum TypEnum { Byte, Int, Float,  Double, Bool, String, Var};
     enum TypKind { Other, Number, Bool, String,Command};
 
     public partial class Parser
@@ -154,6 +154,8 @@ namespace GGL.IO
                 neg = -1;
                 index++;
             }
+            else if (tokenList[index].value == "+")
+                index++;
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
             if (typ < 4 && tokenList[index].kind == TypKind.Other)
             {
@@ -169,15 +171,22 @@ namespace GGL.IO
             }
             
             string value = tokenList[index].value;
-            switch (typ)
+            try
             {
-                case 0: return (byte)(Convert.ToByte(value) * neg);
-                case 1: return (int)(Convert.ToInt32(value) * neg);
-                case 2: return (float)(Convert.ToSingle(value.Replace('.',',').TrimEnd('f')) * neg);
-                case 3: return (double)(Convert.ToDouble(value.Replace('.', ',').TrimEnd('d')) * neg);
-                case 4: return Convert.ToBoolean(value);
-                case 5: return value;
-                default:return null;
+                switch (typ)
+                {
+                    case 0: return (byte)(Convert.ToByte(value) * neg);
+                    case 1: return (int)(Convert.ToInt32(value) * neg);
+                    case 2: return (float)(Convert.ToSingle(value.Replace('.', ',').TrimEnd('f')) * neg);
+                    case 3: return (double)(Convert.ToDouble(value.Replace('.', ',').TrimEnd('d')) * neg);
+                    case 4: return Convert.ToBoolean(value);
+                    case 5: return value;
+                    default: return null;
+                }
+            }
+            catch
+            {
+                throw new Exception("line " + tokenList[index].line + ": value \"" + tokenList[index].value + "\" is not a "+(TypEnum)typ);
             }
         }
         private int testArraySize(int index)

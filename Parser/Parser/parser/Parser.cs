@@ -34,9 +34,9 @@ namespace GGL.IO
         {
             readToTokenList(data);
 
-            pharseAttributes();
-            pharseInit();
-            //pharseEnum();
+            pharseEnums();
+            pharseAttributes("Attributes");
+            pharseAttributes("Init");
             pharseObjects();
         }
 
@@ -137,9 +137,10 @@ namespace GGL.IO
             Array.Resize(ref tokenList, index);
 
             /*
-            Console.WriteLine(tokenList.Length);
+            //Console.WriteLine(tokenList.Length);
             for (int i = 0; i < tokenList.Length; i++)
             {
+                bool space = false;
                 switch (tokenList[i].kind)
                 {
                     case TypKind.Command:
@@ -150,21 +151,24 @@ namespace GGL.IO
                         break;
                     case TypKind.String:
                         Console.ForegroundColor = ConsoleColor.Red;
+                        space = true;
                         break;
                     default:
                         Console.ForegroundColor = ConsoleColor.Gray;
+                        space = true;
                         break;
                 }
-                Console.Write(tokenList[i].value + " ");
+                Console.Write(tokenList[i].value + (space?" ":""));
             }
+            Console.WriteLine();
             */
-            
+
         }
 
 
-        private void pharseAttributes()
+        private void pharseAttributes(string fnname)
         {
-            int index = searchTokenIndex("Attributes");
+            int index = searchTokenIndex(fnname);
             if (index == -1) return;
             index += 2;
             while (tokenList[index].value != "}")
@@ -214,7 +218,7 @@ namespace GGL.IO
                 else if (tokenList[index + 1].value == "=")
                 {
                     int attri = compareNames(tokenList[index].value, attributesName);
-                    if (attri == -1) throw new Exception("Attribute \"" + tokenList[index].value + "\" is not defined");
+                    if (attri == -1) throw new Exception("line " + tokenList[index].line + ": Attribute \"" + tokenList[index].value + "\" is not defined");
                     index += 2;
                     attributesInitValue[attri] = getValue(ref index, attri);
 
@@ -228,29 +232,36 @@ namespace GGL.IO
             }
             //Console.WriteLine("attributesIndex " + attributesIndex);
         }
-        private void pharseInit()
-        {
-            int index = searchTokenIndex("Init");
-            if (index == -1) return;
-            index += 2;
-            while (tokenList[index].value != "}")
-            {
-                if (tokenList[index + 1].value == "=")
-                {
-                    int attri = compareNames(tokenList[index].value, attributesName);
-                    if (attri == -1) throw new Exception("line " + tokenList[index].line + ": Attribute \"" + tokenList[index].value + "\" is not defined");
-                    index += 2;
-                    attributesInitValue[attri] = getValue(ref index, attri);
-                    //Console.ForegroundColor = ConsoleColor.Red;
-                    //Console.WriteLine(attributesName[attri] + "=" + attributesInitValue[attri] + ";");
-                }
-                index++;
-            }
-        }
 
-        private void pharseEnum()
+        private void pharseEnums()
         {
-            
+            for (int index = 0; index < tokenList.Length; index++)
+            {
+                if (tokenList[index].value == "enum")
+                {
+                    int value = 0;
+                    string group = tokenList[index+1].value,name = "";
+                    index += 3;
+                    while (tokenList[index].value != "}")
+                    {
+                        name = tokenList[index].value;
+                        if (tokenList[index+1].value == "=")
+                        {
+                            index += 2;
+                            value = (int)readNativeValue(1, ref index);
+                        }
+                        enumNames[enumIndex] = group + '.' + name;
+                        enumValue[enumIndex++] = value;
+                        if (tokenList[index+1].value == ",")
+                        {
+                            value++;
+                            index++;
+                        }
+                        index++;
+                    }
+                }
+            }
+            /*
             int pos = searchTokenIndex("Enums");
             if (pos == -1) return;
 
@@ -286,7 +297,7 @@ namespace GGL.IO
                         break;
                 }
             } while (scope > 0);
-            
+            */
         }
 
         private void pharseObjects()
@@ -309,7 +320,9 @@ namespace GGL.IO
         }
         private void pharseObject(int id)
         {
-            if (results[id].State != 0) return;
+            int index = results[id].Pos;
+            if (results[id].State == 2) return;
+            else if (results[id].State == 1) throw new Exception("line " + tokenList[index].line + ": Object <" + objectNames[id] + "> is already in process");
 
             results[id].State = 1;
             string parent = results[id].ParentName;
@@ -317,6 +330,7 @@ namespace GGL.IO
             if (parent != null)
             {
                 int pid = compareNames(parent, objectNames);
+                if (pid == -1) throw new Exception("line " + tokenList[index].line + ": inheriting object <"+ parent+"> is not defined");
                 pharseObject(pid);
                 for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = results[pid].AttributesValue[i];
             }
@@ -325,7 +339,6 @@ namespace GGL.IO
                 for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = attributesInitValue[i];
             }
 
-            int index = results[id].Pos;
             index += 1;
             while (tokenList[index].value != "}")
             {
