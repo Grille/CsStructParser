@@ -1,4 +1,4 @@
-# GameData-Parser<br>
+# CsStructParser<br>
 structs parser developed for city game in C#<br>
 
 ## Features

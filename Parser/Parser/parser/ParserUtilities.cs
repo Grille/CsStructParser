@@ -13,6 +13,25 @@ namespace GGL.IO
         char[] commandChars = new char[] { ',', '{', '}', '[', ']', '=', '+', '-', '*', '/', ':', '<', '>', '>' };
         char[] endChars = new char[] { '\n', ' ', '\r', ';', ';' };
 
+        private void initNativeTypes()
+        {
+            //types[typesIndex] = new Typ("int")
+        }
+        private int referseToTokenIndex(int index,string value)
+        {
+            for (int i = index; i > 0; i--)
+                if (tokenList[i].value == value)
+                    return i;
+            return -1;
+        }
+        private int referseToTokenIndex(int index, string[] value)
+        {
+            for (int i = index; i > 0; i--)
+                for (int i2 = 0; i2 < value.Length; i2++)
+                    if (tokenList[i].value == value[i2])
+                        return i;
+            return -1;
+        }
         private int searchTokenIndex(string name)
         {
             for (int i = 0;i< tokenList.Length; i++)
@@ -39,16 +58,16 @@ namespace GGL.IO
         private object getValue(ref int index, int attrIndex)
         {
 
-            int typ = attributesTyp[attrIndex * 2];
-            int array = attributesTyp[attrIndex * 2+1];
+            int typ = attributesTyp[attrIndex];
+            var array = attributesArray[attrIndex];
 
             object retValue = null;
 
-            if (array == 0)
+            if (!array)
                 retValue = readNativeValue(typ, ref index);
             else
             {
-                //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
+                //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 ref, 7 var,8 cond
                 int size = testArraySize(index);
                 switch (typ)
                 {
@@ -149,24 +168,40 @@ namespace GGL.IO
         private object readNativeValue(int typ,ref int index)
         {
             double neg = 1;
-            if (tokenList[index].value == "-")
-            {
-                neg = -1;
-                index++;
-            }
-            else if (tokenList[index].value == "+")
-                index++;
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-            if (typ < 4 && tokenList[index].kind == TypKind.Other)
+            if (typ < 4)
             {
-                int indx = compareNames(tokenList[index].value, enumNames, enumIndex);
-                if (indx == -1) throw new Exception("line "+tokenList[index].line+": enum \"" + tokenList[index].value + "\" is not defined");
-                switch (typ)
+                bool enableRet = false;
+                int retValue = 0;
+                if (tokenList[index].value == "-")
                 {
-                    case 0: return (byte)enumValue[indx];
-                    case 1: return (int)(enumValue[indx]);
-                    case 2: return (float)enumValue[indx];
-                    case 3: return (double)enumValue[indx];
+                    neg = -1;
+                    index++;
+                }
+                else if (tokenList[index].value == "+")
+                    index++;
+                else if (tokenList[index].value == "&")
+                {
+                    index++;
+                    int indx = compareNames(tokenList[index].value, objectNames, objectsIndex);
+                    if (indx == -1) throw new Exception("line " + tokenList[index].line + ": object \"" + tokenList[index].value + "\" is not defined");
+                    retValue = indx; enableRet = true;
+                }
+                else if (tokenList[index].kind == TypKind.Other)
+                {
+                    int indx = compareNames(tokenList[index].value, enumNames, enumIndex);
+                    if (indx == -1) throw new Exception("line " + tokenList[index].line + ": enum \"" + tokenList[index].value + "\" is not defined");
+                    retValue = enumValue[indx]; enableRet = true;
+                }
+                if (enableRet)
+                {
+                    switch (typ)
+                    {
+                        case 0: return (byte)retValue;
+                        case 1: return (int)retValue;
+                        case 2: return (float)retValue;
+                        case 3: return (double)retValue;
+                    }
                 }
             }
             
@@ -203,7 +238,7 @@ namespace GGL.IO
                     case "]":scope--;break;
                     case ",":size++;break;
                     case "to":
-                        size += Math.Abs((int)readNativeValue(1,index - 1) - (int)readNativeValue(1,index+1));
+                        size += Math.Abs((int)readNativeValue(1,referseToTokenIndex(index,new string[] { "[", "]", "," })+1) - (int)readNativeValue(1,index+1));
                         break;
                 }
                 index++;

@@ -7,7 +7,10 @@ using GGL.IO;
 
 namespace Tests
 {
-
+    struct Ts
+    {
+        public int x;
+    }
     class Test
     {
         Parser parser;
@@ -26,20 +29,20 @@ namespace Tests
             test("Add attribute", () =>
             {
                 parser.AddAttribute("byte", "v", "0");
-                if (parser.GetAttributeNames()[0] == "v") printTest(0);
+                if (parser.AttributeNames[0] == "v") printTest(0);
                 else printTest(1);
             });
             test("Declare attribute: int v", () =>
             {
                 parser.ParseCode("Attributes{byte name}");
-                if (parser.GetAttributeNames()[0] == "name") printTest(0);
+                if (parser.AttributeNames[0] == "name") printTest(0);
                 else printTest(1);
             });
 
             test("Declare attribute list: int x,y", () =>
             {
                 parser.ParseCode("Attributes{byte foo,baa}");
-                if (parser.GetAttributeNames()[1] == "baa") printTest(0);
+                if (parser.AttributeNames[1] == "baa") printTest(0);
                 else printTest(1);
             });
             test("Declare objects by id: <0>{}", () =>
@@ -57,6 +60,14 @@ namespace Tests
             testSingleValue<int>("Define attribute: v=2", "Attributes{int v v=2}<0>{}", 0, 2);
             testSingleValue<byte>("Declare & Define attribute: int v=2", "Attributes{byte v=8}<0>{}", 0, 8);
             testSingleValue<byte>("Implizit attribute definition: int v", "Attributes{byte v}<0>{}", 0, 0);
+            test("Get struct by name: <name>{}", () =>
+            {
+                Ts ts; ts.x = 0;
+                parser.ParseCode("Attributes{int x}<foo>{x=4}");
+                parser.GetStruct(ref ts, "foo");
+                if (ts.x == 4) printTest(0);
+                else printTest(1, "" + ts.x);
+            });
 
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             Console.WriteLine("\nType tests");
@@ -82,11 +93,42 @@ namespace Tests
             testArray<int>("int[]", "[-4,8]", -4, 8, 2);
             testArray<int>("int[]", "[2 to 10]", 2, 3, 9);
             testArray<int>("int[]", "[0 to -4]", 0, -1, 5);
+            testArray<int>("int[]", "[-8 to 2]", -8, -7, 11);
             testArray<float>("float[]", "[1.3,8.9]", 1.3f, 8.9f,2);
             testArray<float>("float[]", "[4 to 7]", 4, 5, 4);
             testArray<double>("double[]", "[2.6,17.8]", 2.6, 17.8, 2);
             testArray<bool>("bool[]", "[false,true]", false, true, 2);
             testArray<string>("string[]", "[foo,baa]", "foo", "baa", 2);
+            test("byte[] [e.a,e.b]", () =>
+            {
+                parser.AddEnum("e", new string[2] { "a", "b" });
+                parser.ParseCode("Attributes{byte[] a = [e.a,e.b]}<a>{}");
+                byte[] v = parser.GetAttribute<byte[]>("a", "a");
+                if (v[0] == 0 && v[1] == 1) printTest(0);
+                else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+            });
+            test("byte[] [e.a to e.b]", () =>
+            {
+                parser.AddEnum("e", new string[2] { "a", "b" });
+                parser.ParseCode("Attributes{byte[] a = [e.a to e.b]}<a>{}");
+                byte[] v = parser.GetAttribute<byte[]>("a", "a");
+                if (v[0] == 0 && v[1] == 1) printTest(0);
+                else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+            });
+            test("byte[] [&a,&b]", () =>
+            {
+                parser.ParseCode("Attributes{byte[] a = [&a,&b]}<a>{}<b>{}");
+                byte[] v = parser.GetAttribute<byte[]>("a", "a");
+                if (v[0] == 0&& v[1]==1) printTest(0);
+                else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+            });
+            test("byte[] [&a to &b]", () =>
+            {
+                parser.ParseCode("Attributes{byte[] a = [&a to &b]}<a>{}<b>{}");
+                byte[] v = parser.GetAttribute<byte[]>("a", "a");
+                if (v[0] == 0 && v[1] == 1) printTest(0);
+                else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+            });
             test("empty array []", () =>
             {
                 parser.ParseCode("Attributes{byte[] a = []}<0>{}");
@@ -160,6 +202,12 @@ namespace Tests
                 if (parser.GetAttribute<int>(0, "v") == 1 && parser.GetAttribute<int>(1, "v") == 2) printTest(0);
                 else printTest(1);
             });
+            test("Get object id", () =>
+            {
+                parser.ParseCode("Attributes{int p=&b}<a>{}<b>{}");
+                if (parser.GetAttribute<int>("a", "p") == 1) printTest(0);
+                else printTest(1);
+            });
             test("Object inheritance: foo.x=42 baa.x:foo.x", () =>
             {
                 parser.ParseCode("Attributes{byte x=0}<1>{x=42}<0>:1{}");
@@ -217,6 +265,7 @@ namespace Tests
             testExeption("incompatible value", "Attributes{int v=\"x\";}<0>{}", null);
         }
 
+        
         private void test(string name, Action method)
         {
             text = name;

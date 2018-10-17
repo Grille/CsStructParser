@@ -12,6 +12,7 @@ namespace GGL.IO
         object defaultValue;
         public Typ(string name,object value)
         {
+
             typ = 0;
             this.name = name;
             defaultValue = value;

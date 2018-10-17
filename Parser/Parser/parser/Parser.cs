@@ -6,15 +6,18 @@ namespace GGL.IO
 {
     public unsafe partial class Parser
     {
-        const int con = 9,h=8;
-        enum enu { gg,dd,rr};
+        private int parserState;
 
+        int typesIndex;
+        Typ[] types;
+        string code;
         Token[] tokenList;
 
         byte attributesIndex;
         byte objectsIndex;
 
         byte[] attributesTyp;
+        bool[] attributesArray;
         string[] attributesName;
         string[] objectNames;
         Object[] attributesInitValue;
@@ -23,24 +26,25 @@ namespace GGL.IO
         int[] enumValue;
         string[] enumNames;
 
-        Result[] results;
+        Struct[] results;
 
         public Parser()
         {
             Clear();
         }
 
-        private void parse(string data)
+        private void parse(string code)
         {
-            readToTokenList(data);
+            parseToTokenList(code);
 
             pharseEnums();
+            pharseObjectDeclaretions();
             pharseAttributes("Attributes");
             pharseAttributes("Init");
-            pharseObjects();
+            parseObjectInitialization();
         }
 
-        private void readToTokenList(string data)
+        private void parseToTokenList(string data)
         {
             tokenList = new Token[data.Length];
             int index = 0;
@@ -78,7 +82,7 @@ namespace GGL.IO
                                 tokenList[index++].value = "";
 
                         }
-                        else if (data[i] == ',' || data[i] == '{' || data[i] == '}' || data[i] == '[' || data[i] == ']' || data[i] == '=' || data[i] == '+' || data[i] == '-' || data[i] == '*' || data[i] == '/' || data[i] == ':' || data[i] == '<' || data[i] == '>'|| data[i] == '>')
+                        else if (data[i] == ',' || data[i] == '{' || data[i] == '}' || data[i] == '[' || data[i] == ']' || data[i] == '=' || data[i] == '+' || data[i] == '-' || data[i] == '*' || data[i] == '/' || data[i] == ':' || data[i] == '<' || data[i] == '>'|| data[i] == '&')
                         {
                             //Console.ForegroundColor = ConsoleColor.Blue;
                             //Console.Write(data[i]);
@@ -113,8 +117,11 @@ namespace GGL.IO
                                 tokenList[index].kind = testTypKind(tokenList[index].value);
                                 tokenList[index++].line = curLine;
                             }
+                            else
+                            {
+                                throw new Exception("line " + curLine + ": Unexpected symbol \"" + data[i+1] + "\"");
+                            }
                         }
-                            
                             /*
                                 stringMode = !stringMode;
 
@@ -136,8 +143,9 @@ namespace GGL.IO
             }
             Array.Resize(ref tokenList, index);
 
-            /*
+            
             //Console.WriteLine(tokenList.Length);
+            /*
             for (int i = 0; i < tokenList.Length; i++)
             {
                 bool space = false;
@@ -174,14 +182,14 @@ namespace GGL.IO
             while (tokenList[index].value != "}")
             {
                 //Console.ForegroundColor = ConsoleColor.Green;
-                byte array = 0;
+                bool array = false;
                 string type;
                 if (tokenList[index + 1].value != "=")
                 {
                     type = tokenList[index++].value;
                     if (tokenList[index].value == "[")
                     {
-                        array = 1; index += 2;
+                        array = true; index += 2;
                     }
 
                     byte typ = 0; //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
@@ -200,8 +208,8 @@ namespace GGL.IO
                         string name = tokenList[index].value;
                         object value = null;
 
-                        attributesTyp[attributesIndex * 2] = typ;
-                        attributesTyp[attributesIndex * 2 + 1] = array;
+                        attributesTyp[attributesIndex] = typ;
+                        attributesArray[attributesIndex] = array;
                         attributesName[attributesIndex] = tokenList[index].value;
                         if (tokenList[index + 1].value == "=")
                         {
@@ -300,9 +308,8 @@ namespace GGL.IO
             */
         }
 
-        private void pharseObjects()
+        private void pharseObjectDeclaretions()
         {
-            Result.AttributesNumber = attributesIndex;
             for (int i = 0; i < tokenList.Length; i++)
             {
                 if (tokenList[i].value != "<") continue;
@@ -313,9 +320,13 @@ namespace GGL.IO
                     pid = tokenList[i + 1].value; i+=2;
                 }
                 objectNames[objectsIndex] = name;
-                results[objectsIndex].Init(i, pid);
+                results[objectsIndex].Declare(i, pid);
                 objectsIndex++;
             }
+        }
+        private void parseObjectInitialization()
+        {
+            for (int i = 0; i < objectsIndex; i++) results[i].Define(attributesIndex);
             for (int i = 0; i < objectsIndex; i++) pharseObject(i);
         }
         private void pharseObject(int id)
@@ -351,9 +362,9 @@ namespace GGL.IO
                         results[id].AttributesValue[attri] = getValue(ref index, attri);
                         break;
                     case "+":
-                        if (attributesTyp[attri * 2 + 1] > 0)
+                        if (attributesArray[attri])
                         {
-                            results[id].AttributesValue[attri] = combineArray(attributesTyp[attri * 2], results[id].AttributesValue[attri], getValue(ref index, attri));
+                            results[id].AttributesValue[attri] = combineArray(attributesTyp[attri], results[id].AttributesValue[attri], getValue(ref index, attri));
                         }
                         break;
                     default:
