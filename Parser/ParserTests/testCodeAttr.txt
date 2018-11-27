@@ -1,13 +1,22 @@
 ﻿
+
 enum Enum{a=2,b=9}
+
 struct Point{
   int x,y
 }
-struct Str
-{
-  int number;
+struct Obj{
+  int number = 0;
   Point point;
 }
+
+Obj test{
+  number = 42;
+  point{x=3;y=8;}
+  point = (3,9);
+  point.x = 8;
+}
+
 
 Attributes{
   //Str str = (4,(2,7))

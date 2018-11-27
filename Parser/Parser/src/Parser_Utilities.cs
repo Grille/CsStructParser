@@ -214,7 +214,10 @@ namespace GGL.IO
                     case 1: return (int)(Convert.ToInt32(value) * neg);
                     case 2: return (float)(Convert.ToSingle(value.Replace('.', ',').TrimEnd('f')) * neg);
                     case 3: return (double)(Convert.ToDouble(value.Replace('.', ',').TrimEnd('d')) * neg);
-                    case 4: return Convert.ToBoolean(value);
+                    case 4:
+                        if (value == "0") return false;
+                        else if (value == "1") return true;
+                        return Convert.ToBoolean(value);
                     case 5: return value;
                     default: return null;
                 }
@@ -223,6 +226,20 @@ namespace GGL.IO
             {
                 throw new Exception("line " + tokenList[index].line + ": value \"" + tokenList[index].value + "\" is not a "+(TypEnum)typ);
             }
+        }
+        private object defaultTypValue(int typ,bool array)
+        {
+            //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
+            if (!array)
+                switch (typ)
+                {
+                    case 0: return (byte)0;
+                    case 1: return (int)0;
+                    case 2: return (float)0;
+                    case 3: return (double)0;
+                    case 4: return false;
+                }
+            return null;
         }
         private int testArraySize(int index)
         {

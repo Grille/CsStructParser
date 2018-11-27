@@ -217,6 +217,10 @@ namespace GGL.IO
                             value = getValue(ref index, attributesIndex);
                             attributesInitValue[attributesIndex] = value;
                         }
+                        else
+                        {
+                            attributesInitValue[attributesIndex] = defaultTypValue(typ,array);
+                        }
                         attributesIndex++;
 
                         //Console.WriteLine(type + "[" + array + "]->" + name + (value != null ? ("=" + value) : "") + ";");
@@ -269,43 +273,6 @@ namespace GGL.IO
                     }
                 }
             }
-            /*
-            int pos = searchTokenIndex("Enums");
-            if (pos == -1) return;
-
-            string group = "";
-            int value = 0;
-            int scope = 0;
-            do
-            {
-                pos++;
-                switch (tokenList[pos].value[0])
-                {
-                    case '{': scope++; break;
-                    case '}': scope--; break;
-                    case ',': value++; break;
-                    default:
-                        if (scope == 1)
-                        {
-                            group = tokenList[pos].value;
-                            value = 0;
-                        }
-                        else if (scope == 2)
-                        {
-                            string name = tokenList[pos].value;
-                            if (tokenList[++pos].value == "=")
-                            {
-                                pos +=2;
-                                value = (int)readNativeValue(1, ref pos);
-                                pos++;
-                            }
-                            enumNames[enumIndex] = group + '.' + name;
-                            enumValue[enumIndex++] = value;
-                        }
-                        break;
-                }
-            } while (scope > 0);
-            */
         }
 
         private void pharseObjectDeclaretions()

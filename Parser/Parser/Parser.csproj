@@ -6,7 +6,7 @@
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{113C06B8-FF66-4F34-8979-062E7A9E15BA}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Parser</RootNamespace>
     <AssemblyName>Parser</AssemblyName>
@@ -84,25 +84,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="parser\Parser.cs" />
-    <Compile Include="parser\ParserInterfaces.cs" />
-    <Compile Include="parser\ParserUtilities.cs" />
-    <Compile Include="parser\Result.cs" />
-    <Compile Include="parser\Token.cs" />
-    <Compile Include="parser\Typ.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="src\Parser.cs" />
+    <Compile Include="src\Parser_Interfaces.cs" />
+    <Compile Include="src\Parser_Utilities.cs" />
+    <Compile Include="src\Result.cs" />
+    <Compile Include="src\Token.cs" />
+    <Compile Include="src\Typ.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Test.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="gameObject.gd" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="testCodeAttrNew.txt" />
-    <Content Include="testCodeAttr.txt" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">

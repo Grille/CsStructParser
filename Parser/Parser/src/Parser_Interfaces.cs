@@ -6,7 +6,7 @@ namespace GGL.IO
 {
     public partial class Parser
     {
-        public int ObjectCount { get => objectsIndex; }
+        public int ObjectCount { get { return objectsIndex; } }
         public bool Exists(int number)
         {
             return Exists("" + number);
@@ -96,13 +96,13 @@ namespace GGL.IO
             GetStruct<T>(ref t, name);
             return t;
         }
-        public void GetStruct<T>(ref T t,string name)
+        public void GetStruct<T>(ref T dstStruct,string name)
         {
             int obj = compareNames(name, objectNames);
-            if (obj == -1) throw new Exception("Object <" + name + "> is not defined");
+            if (obj == -1) throw new Exception("Struct <" + name + "> is not defined");
 
-            FieldInfo[] info = t.GetType().GetFields();
-            TypedReference reference = __makeref(t);
+            FieldInfo[] info = dstStruct.GetType().GetFields();
+            TypedReference reference = __makeref(dstStruct);
             for (int i = 0; i < info.Length; i++)
             {
 

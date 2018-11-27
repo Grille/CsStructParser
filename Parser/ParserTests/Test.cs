@@ -1,11 +1,11 @@
-﻿#if DEBUG
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using GGL.IO;
 
-namespace Tests
+namespace ParserTests
 {
     struct Ts
     {
@@ -59,7 +59,7 @@ namespace Tests
             });
             testSingleValue<int>("Define attribute: v=2", "Attributes{int v v=2}<0>{}", 0, 2);
             testSingleValue<byte>("Declare & Define attribute: int v=2", "Attributes{byte v=8}<0>{}", 0, 8);
-            testSingleValue<byte>("Implizit attribute definition: int v", "Attributes{byte v}<0>{}", 0, 0);
+            testSingleValue<byte>("Implizit attribute initialization: int v", "Attributes{byte v}<0>{}", 0, 0);
             test("Get struct by name: <name>{}", () =>
             {
                 Ts ts; ts.x = 0;
@@ -358,4 +358,4 @@ namespace Tests
         }
     }
 }
-#endif
+
