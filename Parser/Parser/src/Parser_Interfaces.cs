@@ -6,15 +6,19 @@ namespace GGL.IO
 {
     public partial class Parser
     {
+
         public int ObjectCount { get { return objectsIndex; } }
+        /// <summary>Test if an object exists with this id.</summary>
         public bool Exists(int number)
         {
             return Exists("" + number);
         }
+        /// <summary>Test if an object exists with this name.</summary>
         public bool Exists(string name)
         {
             return compareNames(name,objectNames) != -1;
         }
+        /// <summary>Removes all previously added attributes, enums and objects.</summary>
         public void Clear()
         {
             typesIndex = 0;
@@ -73,7 +77,7 @@ namespace GGL.IO
                 enumValue[enumIndex++] = value++;
             }
         }
-
+        /*
         public void AddAttribute<T>(string name, T value)
         {
             for (int i = 0; i < attributesIndex; i++)
@@ -81,25 +85,31 @@ namespace GGL.IO
 
             }
         }
+        */
+        /// <summary>Add a new attribute.</summary>
+        /// <param name="type">Type of the attribute. z.B byte,int...</param>
+        /// <param name="name">Name of the attribute.</param>
+        /// <param name="value">Default value of the attribute.</param>
         public void AddAttribute(string type,string name,string value)
         {
             parse("Attributes{"+ type + " "+name+ (value.Length>0?"=" +value:"")+"}");
         }
 
-        public T GetAttribute<T>(int number, string name)
-        {
-            return GetAttribute<T>("" + number, name);
-        }
+        /*
         public T GetStruct<T>(string name)
         {
             T t = default(T);
             GetStruct<T>(ref t, name);
             return t;
         }
-        public void GetStruct<T>(ref T dstStruct,string name)
+        */
+        /// <summary>Fills all public fields and properties of the referenced object with values from identically named fields of the selectet object.</summary>
+        /// <param name="dstStruct">Reference to C# object/struct.</param>
+        /// <param name="srcName">Name of the parsed objects.</param>
+        public void FillAttributes<T>(ref T dstStruct,string srcName)
         {
-            int obj = compareNames(name, objectNames);
-            if (obj == -1) throw new Exception("Struct <" + name + "> is not defined");
+            int obj = compareNames(srcName, objectNames);
+            if (obj == -1) throw new Exception("Struct <" + srcName + "> is not defined");
 
             FieldInfo[] info = dstStruct.GetType().GetFields();
             TypedReference reference = __makeref(dstStruct);
@@ -113,6 +123,16 @@ namespace GGL.IO
                 }
             }
         }
+        /// <summary>Returns the specified attribute.</summary>
+        /// <param name="objectNumber">name/id of the object </param>
+        /// <param name="name">name of the attribute </param>
+        public T GetAttribute<T>(int objectNumber, string name)
+        {
+            return GetAttribute<T>("" + objectNumber, name);
+        }
+        /// <summary>Returns the specified attribute.</summary>
+        /// <param name="objectName">name of the object </param>
+        /// <param name="name">name of the attribute </param>
         public T GetAttribute<T>(string objectName,string name)
         {
             int obj = compareNames(objectName, objectNames);
@@ -121,25 +141,30 @@ namespace GGL.IO
             if (attri == -1) throw new Exception("Attribute <" + name + "> is not declared");
             return (T)results[obj].AttributesValue[attri];
         }
+        /// <summary>Load code from a file without parsing it.</summary>
         public void LoadFile(string path)
         {
             code = File.ReadAllText(path);
         }
+        /// <summary>Load code without parsing it.</summary>
         public void LoadCode(string code)
         {
             this.code = code;
         }
+        /// <summary>Load code from a file and parse it.</summary>
         public void ParseFile(string path)
         {
             code = File.ReadAllText(path);
             parse(code);
             parserState = 0;
         }
+        /// <summary>Load code and parse it.</summary>
         public void ParseCode(string code)
         {
             parse(this.code = code);
             parserState = 0;
         }
+        /*
         public void ParseDeclerations()
         {
             parseToTokenList(code);
@@ -154,6 +179,8 @@ namespace GGL.IO
             parseObjectInitialization();
             parserState = 0;
         }
+        */
+        /// <summary>Parse the currently loaded code.</summary>
         public void Parse()
         {
             parse(code);

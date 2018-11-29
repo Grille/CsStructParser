@@ -23,7 +23,6 @@ namespace ParserTests
             Console.WriteLine("Run tests...\n");
 
             parser = new Parser();
-            
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             Console.WriteLine("\nBasic tests");
             test("Add attribute", () =>
@@ -34,15 +33,15 @@ namespace ParserTests
             });
             test("Declare attribute: int v", () =>
             {
-                parser.ParseCode("Attributes{byte name}");
-                if (parser.AttributeNames[0] == "name") printTest(0);
+                parser.ParseCode("Attributes{int v}");
+                if (parser.AttributeNames[0] == "v") printTest(0);
                 else printTest(1);
             });
 
             test("Declare attribute list: int x,y", () =>
             {
-                parser.ParseCode("Attributes{byte foo,baa}");
-                if (parser.AttributeNames[1] == "baa") printTest(0);
+                parser.ParseCode("Attributes{int x,y}");
+                if (parser.AttributeNames[1] == "y") printTest(0);
                 else printTest(1);
             });
             test("Declare objects by id: <0>{}", () =>
@@ -64,7 +63,7 @@ namespace ParserTests
             {
                 Ts ts; ts.x = 0;
                 parser.ParseCode("Attributes{int x}<foo>{x=4}");
-                parser.GetStruct(ref ts, "foo");
+                parser.FillAttributes(ref ts, "foo");
                 if (ts.x == 4) printTest(0);
                 else printTest(1, "" + ts.x);
             });

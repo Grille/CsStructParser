@@ -28,6 +28,7 @@ namespace GGL.IO
 
         Struct[] results;
 
+        bool codeLoaded, objectDeclaretionsParsed, attributesParsed, objectInitializationParsed;
         public Parser()
         {
             Clear();

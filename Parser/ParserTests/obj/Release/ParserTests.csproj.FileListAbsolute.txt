@@ -1,8 +1,0 @@
-C:\Users\service\Documents\GitHub\CsStructParser\Parser\ParserTests\bin\Release\ParserTests.exe.config
-C:\Users\service\Documents\GitHub\CsStructParser\Parser\ParserTests\obj\Release\ParserTests.csprojResolveAssemblyReference.cache
-C:\Users\service\Documents\GitHub\CsStructParser\Parser\ParserTests\bin\Release\ParserTests.exe
-C:\Users\service\Documents\GitHub\CsStructParser\Parser\ParserTests\bin\Release\ParserTests.pdb
-C:\Users\service\Documents\GitHub\CsStructParser\Parser\ParserTests\bin\Release\Parser.dll
-C:\Users\service\Documents\GitHub\CsStructParser\Parser\ParserTests\bin\Release\Parser.pdb
-C:\Users\service\Documents\GitHub\CsStructParser\Parser\ParserTests\obj\Release\ParserTests.exe
-C:\Users\service\Documents\GitHub\CsStructParser\Parser\ParserTests\obj\Release\ParserTests.pdb
