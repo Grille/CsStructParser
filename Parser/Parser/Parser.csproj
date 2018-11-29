@@ -89,6 +89,7 @@
     <Compile Include="src\Parser_Utilities.cs" />
     <Compile Include="src\Result.cs" />
     <Compile Include="src\Token.cs" />
+    <Compile Include="src\TokenList.cs" />
     <Compile Include="src\Typ.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System;
 using System.Reflection;
+using System.Collections.Generic;
 
 namespace GGL.IO
 {
@@ -40,6 +41,7 @@ namespace GGL.IO
 
             results = new Struct[256];
         }
+        /// <summary>List of all attribute names</summary>
         public string[] AttributeNames
         {
             get
@@ -49,6 +51,7 @@ namespace GGL.IO
                 return result;
             }
         }
+        /// <summary>List of all object names</summary>
         public string[] ObjectNames
         {
             get
@@ -77,15 +80,6 @@ namespace GGL.IO
                 enumValue[enumIndex++] = value++;
             }
         }
-        /*
-        public void AddAttribute<T>(string name, T value)
-        {
-            for (int i = 0; i < attributesIndex; i++)
-            {
-
-            }
-        }
-        */
         /// <summary>Add a new attribute.</summary>
         /// <param name="type">Type of the attribute. z.B byte,int...</param>
         /// <param name="name">Name of the attribute.</param>
@@ -94,15 +88,6 @@ namespace GGL.IO
         {
             parse("Attributes{"+ type + " "+name+ (value.Length>0?"=" +value:"")+"}");
         }
-
-        /*
-        public T GetStruct<T>(string name)
-        {
-            T t = default(T);
-            GetStruct<T>(ref t, name);
-            return t;
-        }
-        */
         /// <summary>Fills all public fields and properties of the referenced object with values from identically named fields of the selectet object.</summary>
         /// <param name="dstStruct">Reference to C# object/struct.</param>
         /// <param name="srcName">Name of the parsed objects.</param>
@@ -156,13 +141,11 @@ namespace GGL.IO
         {
             code = File.ReadAllText(path);
             parse(code);
-            parserState = 0;
         }
         /// <summary>Load code and parse it.</summary>
         public void ParseCode(string code)
         {
             parse(this.code = code);
-            parserState = 0;
         }
         /*
         public void ParseDeclerations()
@@ -170,21 +153,17 @@ namespace GGL.IO
             parseToTokenList(code);
             pharseEnums();
             pharseObjectDeclaretions();
-            parserState = 1;
         }
         public void ParseInitializations()
         {
             pharseAttributes("Attributes");
-            pharseAttributes("Init");
             parseObjectInitialization();
-            parserState = 0;
         }
         */
         /// <summary>Parse the currently loaded code.</summary>
         public void Parse()
         {
             parse(code);
-            parserState = 0;
         }
     }
 }

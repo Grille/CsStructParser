@@ -11,7 +11,7 @@ namespace GGL.IO
         int typesIndex;
         Typ[] types;
         string code;
-        Token[] tokenList;
+        TokenList tokenList;
 
         byte attributesIndex;
         byte objectsIndex;
@@ -41,13 +41,12 @@ namespace GGL.IO
             pharseEnums();
             pharseObjectDeclaretions();
             pharseAttributes("Attributes");
-            pharseAttributes("Init");
             parseObjectInitialization();
         }
 
         private void parseToTokenList(string data)
         {
-            tokenList = new Token[data.Length];
+            tokenList = new TokenList(data.Length);
             int index = 0;
             int curLine = 1;
             int commentMode = 0;
@@ -71,10 +70,10 @@ namespace GGL.IO
                                 if (data[i] == '\n')
                                     curLine++;
                             }
-                            i += 1;
+                            // += 1;
                             //Console.ForegroundColor = ConsoleColor.Red;
                             //Console.Write(data.Substring(start, end- start+1));
-
+                            tokenList[0].kind = 0;
                             tokenList[index].line = curLine;
                             tokenList[index].kind = TypKind.String;
                             if (end != 0)
@@ -142,7 +141,9 @@ namespace GGL.IO
                 else if (commentMode == 1 && data[i] == '\n') commentMode = 0;
                 else if (commentMode == 2 && data[i] == '*' && data[i + 1] == '/') { commentMode = 0; i++; }
             }
-            Array.Resize(ref tokenList, index);
+            tokenList.Length = index;
+
+            //Array.Resize(ref tokenList, index);
 
             
             //Console.WriteLine(tokenList.Length);
@@ -171,6 +172,7 @@ namespace GGL.IO
             }
             Console.WriteLine();
             */
+            
 
         }
 

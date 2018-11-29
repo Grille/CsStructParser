@@ -13,6 +13,12 @@ namespace GGL.IO
         char[] commandChars = new char[] { ',', '{', '}', '[', ']', '=', '+', '-', '*', '/', ':', '<', '>', '>' };
         char[] endChars = new char[] { '\n', ' ', '\r', ';', ';' };
 
+        private void setCode(string code)
+        {
+            codeLoaded = true;
+            objectDeclaretionsParsed = attributesParsed = objectInitializationParsed = false;
+            this.code = code;
+        }
         private void initNativeTypes()
         {
             //types[typesIndex] = new Typ("int")

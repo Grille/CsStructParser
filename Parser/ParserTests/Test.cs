@@ -13,6 +13,7 @@ namespace ParserTests
     }
     class Test
     {
+        int testOkCount = 0, testFailCount = 0, testErrorCount = 0;
         Parser parser;
         private string text;
         public void Run()
@@ -58,8 +59,7 @@ namespace ParserTests
             });
             testSingleValue<int>("Define attribute: v=2", "Attributes{int v v=2}<0>{}", 0, 2);
             testSingleValue<byte>("Declare & Define attribute: int v=2", "Attributes{byte v=8}<0>{}", 0, 8);
-            testSingleValue<byte>("Implizit attribute initialization: int v", "Attributes{byte v}<0>{}", 0, 0);
-            test("Get struct by name: <name>{}", () =>
+            test("Fill attributes()", () =>
             {
                 Ts ts; ts.x = 0;
                 parser.ParseCode("Attributes{int x}<foo>{x=4}");
@@ -68,21 +68,37 @@ namespace ParserTests
                 else printTest(1, "" + ts.x);
             });
 
+            Console.WriteLine("\nSyntax tests");
+            test("Next token after string end not cut", () =>
+            {
+                Ts ts; ts.x = 0;
+                parser.ParseCode("Attributes{string x=\"xx\",y=\"yy\"}<0>{}");
+                string x = parser.GetAttribute<string>(0, "x"), y = parser.GetAttribute<string>(0, "y");
+                if (x == "xx" && y == "yy") printTest(0);
+                else printTest(1, "x:" + y + " y:" + y);
+            });
+
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             Console.WriteLine("\nType tests");
+            testType<byte>("byte", 0);
             testType<byte>("byte", "16", 16);
+            testType<int>("int", 0);
             testType<int>("int", "42", 42);
             testType<int>("int", "+42", +42);
             testType<int>("int", "-42", -42);
+            testType<float>("float", 0);
             testType<float>("float", "1.23", 1.23f);
             testType<float>("float", "-1.23", -1.23f);
             testType<float>("float", "1.23f", 1.23f);
+            testType<double>("double", 0);
             testType<double>("double", "2.46", 2.46d);
             testType<double>("double", "-2.46", -2.46d);
             testType<double>("double","2.46d", 2.46d);
+            testType<bool>("bool", false);
             testType<bool>("bool", "false", false);
             testType<bool>("bool", "true", true);
             testType<bool>("bool", "0", false);
+            testType<string>("string", "");
             testType<string>("string", "\"test\"", "test");
             testType<string>("string", "\"\"", "");
 
@@ -97,8 +113,17 @@ namespace ParserTests
             testArray<float>("float[]", "[4 to 7]", 4, 5, 4);
             testArray<double>("double[]", "[2.6,17.8]", 2.6, 17.8, 2);
             testArray<bool>("bool[]", "[false,true]", false, true, 2);
-            testArray<string>("string[]", "[foo,baa]", "foo", "baa", 2);
-            test("byte[] [e.a,e.b]", () =>
+            testArray<bool>("bool[]", "[0,1]", false, true, 2);
+            testArray<string>("string[]", "[\"foo\",\"baa\"]", "foo", "baa", 2);
+
+            test("empty array []", () =>
+            {
+                parser.ParseCode("Attributes{byte[] a = []}<0>{}");
+                byte[] v = parser.GetAttribute<byte[]>(0, "a");
+                if (v != null && v.Length == 0) printTest(0);
+                else printTest(1);
+            });
+            test("array/enum byte[] [e.a,e.b]", () =>
             {
                 parser.AddEnum("e", new string[2] { "a", "b" });
                 parser.ParseCode("Attributes{byte[] a = [e.a,e.b]}<a>{}");
@@ -106,7 +131,7 @@ namespace ParserTests
                 if (v[0] == 0 && v[1] == 1) printTest(0);
                 else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
             });
-            test("byte[] [e.a to e.b]", () =>
+            test("array/enum byte[] [e.a to e.b]", () =>
             {
                 parser.AddEnum("e", new string[2] { "a", "b" });
                 parser.ParseCode("Attributes{byte[] a = [e.a to e.b]}<a>{}");
@@ -114,26 +139,19 @@ namespace ParserTests
                 if (v[0] == 0 && v[1] == 1) printTest(0);
                 else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
             });
-            test("byte[] [&a,&b]", () =>
+            test("array/ref byte[] [&a,&b]", () =>
             {
                 parser.ParseCode("Attributes{byte[] a = [&a,&b]}<a>{}<b>{}");
                 byte[] v = parser.GetAttribute<byte[]>("a", "a");
                 if (v[0] == 0&& v[1]==1) printTest(0);
                 else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
             });
-            test("byte[] [&a to &b]", () =>
+            test("array/ref byte[] [&a to &b]", () =>
             {
                 parser.ParseCode("Attributes{byte[] a = [&a to &b]}<a>{}<b>{}");
                 byte[] v = parser.GetAttribute<byte[]>("a", "a");
                 if (v[0] == 0 && v[1] == 1) printTest(0);
                 else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
-            });
-            test("empty array []", () =>
-            {
-                parser.ParseCode("Attributes{byte[] a = []}<0>{}");
-                byte[] v = parser.GetAttribute<byte[]>(0, "a");
-                if (v != null && v.Length == 0) printTest(0);
-                else printTest(1);
             });
             test("interleaved array [[2],4]", () =>
             {
@@ -207,20 +225,6 @@ namespace ParserTests
                 if (parser.GetAttribute<int>("a", "p") == 1) printTest(0);
                 else printTest(1);
             });
-            test("Object inheritance: foo.x=42 baa.x:foo.x", () =>
-            {
-                parser.ParseCode("Attributes{byte x=0}<1>{x=42}<0>:1{}");
-                int v = parser.GetAttribute<byte>(0, "x");
-                if (v == 42) printTest(0);
-                else printTest(1, "" + v);
-            });
-            test("Object inheritance: baa.x:foo.x foo.x=42", () =>
-            {
-                parser.ParseCode("Attributes{byte x=0}<0>:1{}<1>{x=42}");
-                int v = parser.GetAttribute<byte>(0, "x");
-                if (v == 42) printTest(0);
-                else printTest(1, "" + v);
-            });
             test("Object array", () =>
             {
                 parser.ParseCode("Attributes{byte[]a}<0>{a=[2,4]}");
@@ -249,19 +253,49 @@ namespace ParserTests
                 if (v[0] == 2 && v[1] == 4 && v.Length == 2) printTest(0);
                 else printTest(1);
             });
-            test("Object array inheritance: foo:array+baa.array", () =>
-             {
-                 parser.ParseCode("Attributes{byte[]a=[2]}<0>{a+[4]}");
-                 byte[] v = parser.GetAttribute<byte[]>(0, "a");
-                 if (v[0] == 2 && v[1] == 4) printTest(0);
-                 else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
-             });
+
+            Console.WriteLine("\nInheritance tests");
+            test("Object inheritance: a.x=42 a.x:b.x", () =>
+            {
+                parser.ParseCode("Attributes{byte x=0}<1>{x=42}<0>:1{}");
+                int v = parser.GetAttribute<byte>(0, "x");
+                if (v == 42) printTest(0);
+                else printTest(1, "" + v);
+            });
+            test("Object inheritance: a.x:b.x b.x=42", () =>
+            {
+                parser.ParseCode("Attributes{byte x=0}<0>:1{}<1>{x=42}");
+                int v = parser.GetAttribute<byte>(0, "x");
+                if (v == 42) printTest(0);
+                else printTest(1, "" + v);
+            });
+            test("Object int array inheritance: a:array + b.array", () =>
+            {
+                parser.ParseCode("Attributes{byte[]a=[2]}<0>{a+[4]}");
+                byte[] v = parser.GetAttribute<byte[]>(0, "a");
+                if (v[0] == 2 && v[1] == 4) printTest(0);
+                else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+            });
+            test("Object string array inheritance: a:array + b.array", () =>
+            {
+                parser.ParseCode("Attributes{string[]a=[\"x\"]}<0>{a+[\"y\"]}");
+                string[] v = parser.GetAttribute<string[]>(0, "a");
+                if (v[0] == "x" && v[1] == "y") printTest(0);
+                else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+            });
+
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             Console.WriteLine("\nException tests");
             testExeption("circular reference", "Attributes{}<0>:1{}<1>:0{}", null);
             testExeption("heritage from undefined", "Attributes{}<0>:1{}", null);
             testExeption("undeclared attribute access", "Attributes{v=0;}<0>{}", null);
             testExeption("incompatible value", "Attributes{int v=\"x\";}<0>{}", null);
+
+            float count = testOkCount + testFailCount + testErrorCount;
+            Console.WriteLine("\nExecuted tests: "+ count);
+            Console.WriteLine("ok: " + testOkCount + " | "+ 100*Math.Round((double)(testOkCount/count),2) + "%");
+            Console.WriteLine("fail: " + testFailCount + " | " + 100 * Math.Round((double)(testFailCount / count), 2) + "%");
+            Console.WriteLine("error: " + testErrorCount + " | " + 100 * Math.Round((double)(testErrorCount / count), 2) + "%");
         }
 
         
@@ -285,6 +319,18 @@ namespace ParserTests
             });
         }
 
+        private void testType<T>(string typ, T expect)
+        {
+            test(typ, () =>
+            {
+                parser.ParseCode("Attributes{" + typ + " v}<0>{}");
+                T v = (T)parser.GetAttribute<T>(0, "v");
+                if (Convert.ToString(v) == Convert.ToString(expect))
+                    printTest(0);
+                else
+                    printTest(1, "" + v);
+            });
+        }
         private void testType<T>(string typ,string num,T expect)
         {
             test(typ + " " + num, () =>
@@ -341,14 +387,17 @@ namespace ParserTests
                 case 0:
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.Write(text + " OK");
+                    testOkCount++;
                     break;
                 case 1:
                     Console.ForegroundColor = ConsoleColor.DarkYellow;
                     Console.Write(text + " FAIL");
+                    testFailCount++;
                     break;
                 case 2:
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.Write(text + " ERROR");
+                    testErrorCount++;
                     break;
             }
             Console.ForegroundColor = ConsoleColor.Gray;

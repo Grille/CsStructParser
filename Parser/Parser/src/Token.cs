@@ -5,7 +5,7 @@ using System.Text;
 
 namespace GGL.IO
 {
-    struct Token
+    unsafe struct Token
     {
         public int line;
         public TypKind kind;

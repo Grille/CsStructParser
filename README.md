@@ -2,56 +2,49 @@
 structs parser developed for city game in C#<br>
 
 ## Features
-read simple human-readable structs from files.<br>
+parse simple human-readable structs from files.<br>
 inheritance of structures and arrays<br>
 
 ## Use in C#
 ````cs
 Parser parser = new Parser();
 parser.ParseFile("code.txt");
-foreach (string obj in parser.GetObjectNames())
+foreach (string obj in parser.ObjectNames)
 {
-    parser.GetAttribute<string>(obj, "name");
+  Write(obj);
+  foreach (string att in parser.AttributeNames)
+  {
+    Write(parser.GetAttribute<string>(obj, att));
+  }
 }
 ````
-## GD-format
-type and name of the attributes<br>
-````js
-Attributes
-{
+## "code.txt" Demo
+````cs
+//type and name of the attributes
+Attributes{
   string name;
-  int number;
-  int[] array1, array2;
+  int number = 42;
+  int[] array;
 }
-````
-default values for attributes<br>
-````js
-Init
-{
-  name = "";
-  number = 42;
-  array = [];
-}
-````
-set values<br>
-````js
-<0>{
+
+//set values
+<obj0>{
   name = "obj-0";
-  array = [1,2]; 
+  array = [1,2]; //set values
 }
-<1>:0 { //inherits from <0>
+<obj1>:obj0 { //inherits from obj0
   name = "obj-1"; 
-  array + [3,4]; 
+  array + [3,4]; //add values
 }
 ````
-results<br>
-````js
-0:
-  name = "obj-0"; 
-  number = 42; //from init
-  array = [1,2]; 
-1:
-  name = "obj-1"; 
-  number = 42;//inherited from <0>
-  array = [1,2,3,4]; //add values from <0> & <1>
+## Output
+````c
+obj0:
+-name "obj-0"
+-number 42 //default
+-array [1,2]
+obj1:
+-name "obj-1"
+-number 42 //inherited from obj0
+-array [1,2,3,4] //add obj0.array values to obj1.array values
 ````
