@@ -5,8 +5,8 @@ using System.Text;
 
 namespace GGL.IO
 {
-    enum TypEnum { Byte, Int, Float,  Double, Bool, String, Var};
-    enum TypKind { Other, Number, Bool, String,Command};
+    public enum TypEnum { Byte, Int, Float,  Double, Bool, String, Var};
+    public enum TypKind { Other, Number, Bool, String,Command};
 
     public partial class Parser
     {
@@ -64,7 +64,7 @@ namespace GGL.IO
         private object getValue(ref int index, int attrIndex)
         {
 
-            int typ = attributesTyp[attrIndex];
+            TypEnum typ = attributesTyp[attrIndex];
             var array = attributesArray[attrIndex];
 
             object retValue = null;
@@ -77,12 +77,12 @@ namespace GGL.IO
                 int size = testArraySize(index);
                 switch (typ)
                 {
-                    case 0: retValue = new byte[size];break;
-                    case 1: retValue = new int[size]; break;
-                    case 2: retValue = new float[size]; break;
-                    case 3: retValue = new double[size]; break;
-                    case 4: retValue = new bool[size]; break;
-                    case 5: retValue = new string[size]; break;
+                    case TypEnum.Byte: retValue = new byte[size];break;
+                    case TypEnum.Int: retValue = new int[size]; break;
+                    case TypEnum.Float: retValue = new float[size]; break;
+                    case TypEnum.Double: retValue = new double[size]; break;
+                    case TypEnum.Bool: retValue = new bool[size]; break;
+                    case TypEnum.String: retValue = new string[size]; break;
                 }
                 
                 if (size == 0)
@@ -151,31 +151,31 @@ namespace GGL.IO
             return TypKind.Other;
         }
 
-        private void addValueToArray(ref object array, int typ, object value, int index)
+        private void addValueToArray(ref object array, TypEnum typ, object value, int index)
         {
             switch (typ)
             {
-                case 0: ((byte[])array)[index] = Convert.ToByte(value); break;
-                case 1: ((int[])array)[index] = Convert.ToInt32(value); break;
-                case 2: ((float[])array)[index] = Convert.ToSingle(value); break;
-                case 3: ((double[])array)[index] = Convert.ToDouble(value); break;
-                case 4: ((bool[])array)[index] = Convert.ToBoolean(value); break;
-                case 5: ((string[])array)[index] = (string)value; break;
+                case TypEnum.Byte: ((byte[])array)[index] = Convert.ToByte(value); break;
+                case TypEnum.Int: ((int[])array)[index] = Convert.ToInt32(value); break;
+                case TypEnum.Float: ((float[])array)[index] = Convert.ToSingle(value); break;
+                case TypEnum.Double: ((double[])array)[index] = Convert.ToDouble(value); break;
+                case TypEnum.Bool: ((bool[])array)[index] = Convert.ToBoolean(value); break;
+                case TypEnum.String: ((string[])array)[index] = (string)value; break;
             }
         }
-        private void readValueToArray(ref object array, int typ, ref int pos,int index)
+        private void readValueToArray(ref object array, TypEnum typ, ref int pos,int index)
         {
             addValueToArray(ref array, typ, readNativeValue(typ, ref pos), index);
         }
-        private object readNativeValue(int typ, int index)
+        private object readNativeValue(TypEnum typ, int index)
         {
             return readNativeValue(typ, ref index);
         }
-        private object readNativeValue(int typ,ref int index)
+        private object readNativeValue(TypEnum typ,ref int index)
         {
             double neg = 1;
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-            if (typ < 4)
+            if (typ == TypEnum.Byte|| typ == TypEnum.Int|| typ == TypEnum.Float|| typ == TypEnum.Double)
             {
                 bool enableRet = false;
                 int retValue = 0;
@@ -203,10 +203,10 @@ namespace GGL.IO
                 {
                     switch (typ)
                     {
-                        case 0: return (byte)retValue;
-                        case 1: return (int)retValue;
-                        case 2: return (float)retValue;
-                        case 3: return (double)retValue;
+                        case TypEnum.Byte: return (byte)retValue;
+                        case TypEnum.Int: return (int)retValue;
+                        case TypEnum.Float: return (float)retValue;
+                        case TypEnum.Double: return (double)retValue;
                     }
                 }
             }
@@ -216,15 +216,15 @@ namespace GGL.IO
             {
                 switch (typ)
                 {
-                    case 0: return (byte)(Convert.ToByte(value) * neg);
-                    case 1: return (int)(Convert.ToInt32(value) * neg);
-                    case 2: return (float)(Convert.ToSingle(value.Replace('.', ',').TrimEnd('f')) * neg);
-                    case 3: return (double)(Convert.ToDouble(value.Replace('.', ',').TrimEnd('d')) * neg);
-                    case 4:
+                    case TypEnum.Byte: return (byte)(Convert.ToByte(value) * neg);
+                    case TypEnum.Int: return (int)(Convert.ToInt32(value) * neg);
+                    case TypEnum.Float: return (float)(Convert.ToSingle(value.Replace('.', ',').TrimEnd('f')) * neg);
+                    case TypEnum.Double: return (double)(Convert.ToDouble(value.Replace('.', ',').TrimEnd('d')) * neg);
+                    case TypEnum.Bool:
                         if (value == "0") return false;
                         else if (value == "1") return true;
                         return Convert.ToBoolean(value);
-                    case 5: return value;
+                    case TypEnum.String: return value;
                     default: return null;
                 }
             }
@@ -233,17 +233,17 @@ namespace GGL.IO
                 throw new Exception("line " + tokenList[index].line + ": value \"" + tokenList[index].value + "\" is not a "+(TypEnum)typ);
             }
         }
-        private object defaultTypValue(int typ,bool array)
+        private object defaultTypValue(TypEnum typ,bool array)
         {
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
             if (!array)
                 switch (typ)
                 {
-                    case 0: return (byte)0;
-                    case 1: return (int)0;
-                    case 2: return (float)0;
-                    case 3: return (double)0;
-                    case 4: return false;
+                    case TypEnum.Byte: return (byte)0;
+                    case TypEnum.Int: return (int)0;
+                    case TypEnum.Float: return (float)0;
+                    case TypEnum.Double: return (double)0;
+                    case TypEnum.Bool: return false;
                 }
             return null;
         }
@@ -261,7 +261,7 @@ namespace GGL.IO
                     case "]":scope--;break;
                     case ",":size++;break;
                     case "to":
-                        size += Math.Abs((int)readNativeValue(1,referseToTokenIndex(index,new string[] { "[", "]", "," })+1) - (int)readNativeValue(1,index+1));
+                        size += Math.Abs((int)readNativeValue(TypEnum.Int, referseToTokenIndex(index,new string[] { "[", "]", "," })+1) - (int)readNativeValue(TypEnum.Int, index+1));
                         break;
                 }
                 index++;
@@ -269,17 +269,17 @@ namespace GGL.IO
             return size+1;
 
         }
-        private object combineArray(int typ,object array1,object array2)
+        private object combineArray(TypEnum typ,object array1,object array2)
         {
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
             switch (typ)
             {
-                case 0: return combineArray((byte[])array1, (byte[])array2);
-                case 1: return combineArray((int[])array1, (int[])array2);
-                case 2: return combineArray((float[])array1, (float[])array2);
-                case 3: return combineArray((double[])array1, (double[])array2);
-                case 4: return combineArray((bool[])array1, (bool[])array2);
-                case 5: return combineArray((string[])array1, (string[])array2);
+                case TypEnum.Byte: return combineArray((byte[])array1, (byte[])array2);
+                case TypEnum.Int: return combineArray((int[])array1, (int[])array2);
+                case TypEnum.Float: return combineArray((float[])array1, (float[])array2);
+                case TypEnum.Double: return combineArray((double[])array1, (double[])array2);
+                case TypEnum.Bool: return combineArray((bool[])array1, (bool[])array2);
+                case TypEnum.String: return combineArray((string[])array1, (string[])array2);
             }
             return null;
         }

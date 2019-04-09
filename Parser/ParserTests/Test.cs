@@ -99,9 +99,11 @@ namespace ParserTests
             testType<bool>("bool", "true", true);
             testType<bool>("bool", "0", false);
             testType<string>("string", "");
-            testType<string>("string", "\"test\"", "test");
             testType<string>("string", "\"\"", "");
-
+            testType<string>("string", "\"test\"", "test");
+            testType<string>("string", "\"-\\\"\\n-\"", "-\"\n-");
+            testType<string>("script", "(){foo}", "foo");
+            testType<string>("script", "(){foo{baa}}", "foo{baa}");
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             Console.WriteLine("\nArray tests");
             testArray<byte>("byte[]", "[2,4]", 2, 4,2);
@@ -328,7 +330,7 @@ namespace ParserTests
                 if (Convert.ToString(v) == Convert.ToString(expect))
                     printTest(0);
                 else
-                    printTest(1, "" + v);
+                    printTest(1, "'" + v+"'");
             });
         }
         private void testType<T>(string typ,string num,T expect)
@@ -340,7 +342,7 @@ namespace ParserTests
                 if (Convert.ToString(v) == Convert.ToString(expect))
                     printTest(0);
                 else
-                    printTest(1, "" + v);
+                    printTest(1, "'" + v + "'");
             });
         }
         private void testArray<T>(string typ, string num, T expect0,T expect1,int length)

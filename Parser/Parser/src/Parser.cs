@@ -16,7 +16,7 @@ namespace GGL.IO
         byte attributesIndex;
         byte objectsIndex;
 
-        byte[] attributesTyp;
+        TypEnum[] attributesTyp;
         bool[] attributesArray;
         string[] attributesName;
         string[] objectNames;
@@ -64,11 +64,39 @@ namespace GGL.IO
                         {
                             i += 1;
                             int start = i, end = 0;
-                            while (data[i] != '"')
+                            while (data[i] != '"' || data[i-1] == '\\')
                             {
-                                end = i++;
                                 if (data[i] == '\n')
                                     curLine++;
+                                end = i++;
+                            }
+                            // += 1;
+                            //Console.ForegroundColor = ConsoleColor.Red;
+                            //Console.Write(data.Substring(start, end- start+1));
+                            tokenList[0].kind = 0;
+                            tokenList[index].line = curLine;
+                            tokenList[index].kind = TypKind.String;
+                            if (end != 0)
+                                tokenList[index++].value = data.Substring(start, end - start + 1)
+                                    .Replace("\\\\","\\").Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t").Replace("\\\"", "\"");
+                            else
+                                tokenList[index++].value = "";
+
+                        }
+                        else if (data[i] == '('&& data[i+1] == ')'&& data[i+2] == '{')
+                        {
+                            i += 3;
+                            int start = i, end = 0;
+                            int scope = 0;
+                            while (data[i] != '}' || scope > 0)
+                            {
+                                switch (data[i])
+                                {
+                                    case '{': scope++; break;
+                                    case '}': scope--; break;
+                                    case '\n': curLine++; break;
+                                }
+                                end = i++;
                             }
                             // += 1;
                             //Console.ForegroundColor = ConsoleColor.Red;
@@ -122,20 +150,6 @@ namespace GGL.IO
                                 throw new Exception("line " + curLine + ": Unexpected symbol \"" + data[i+1] + "\"");
                             }
                         }
-                            /*
-                                stringMode = !stringMode;
-
-                            if (stringMode) dstData[iDst++] = data[iSrc];
-                            else if (data[iSrc] == ' ' || data[iSrc] == '\r' || data[iSrc] == ';' || data[iSrc] == ';') dstData[iDst++] = '\n';
-                            else if (data[iSrc] == ',' || data[iSrc] == '{' || data[iSrc] == '}' || data[iSrc] == '[' || data[iSrc] == ']' || data[iSrc] == '=' || data[iSrc] == '+' || data[iSrc] == '-' || data[iSrc] == '*' || data[iSrc] == '/' || data[iSrc] == ':' || data[iSrc] == '<' || data[iSrc] == '>' || data[iSrc] == ';')
-                            {
-                                dstData[iDst++] = '\n';
-                                dstData[iDst++] = data[iSrc];
-                                dstData[iDst++] = '\n';
-                            }
-                            else dstData[iDst++] = data[iSrc];
-                            */
-
                     }
                 }
                 else if (commentMode == 1 && data[i] == '\n') commentMode = 0;
@@ -160,7 +174,7 @@ namespace GGL.IO
                         Console.ForegroundColor = ConsoleColor.Green;
                         break;
                     case TypKind.String:
-                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.ForegroundColor = ConsoleColor.DarkYellow;
                         space = true;
                         break;
                     default:
@@ -195,14 +209,14 @@ namespace GGL.IO
                         array = true; index += 2;
                     }
 
-                    byte typ = 0; //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-                    if (type[0] == 'b' && type[0 + 1] == 'y') typ = 0;
-                    else if (type[0] == 'i') typ = 1;
-                    else if (type[0] == 'f') typ = 2;
-                    else if (type[0] == 'd') typ = 3;
-                    else if (type[0] == 'b' && type[0 + 1] == 'o') typ = 4;
-                    else if (type[0] == 's') typ = 5;
-                    else if (type[0] == 'v') typ = 6;
+                    TypEnum typ = TypEnum.Var; //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
+                    if (type[0] == 'b' && type[1] == 'y') typ = TypEnum.Byte;
+                    else if (type[0] == 'i') typ = TypEnum.Int;
+                    else if (type[0] == 'f') typ = TypEnum.Float;
+                    else if (type[0] == 'd') typ = TypEnum.Double;
+                    else if (type[0] == 'b' && type[1] == 'o') typ = TypEnum.Bool;
+                    else if (type[0] == 's') typ = TypEnum.String;
+                    else if (type[0] == 'v') typ = TypEnum.Var;
 
                     int i = 0;
                     do
@@ -263,7 +277,7 @@ namespace GGL.IO
                         if (tokenList[index+1].value == "=")
                         {
                             index += 2;
-                            value = (int)readNativeValue(1, ref index);
+                            value = (int)readNativeValue(TypEnum.Int, ref index);
                         }
                         enumNames[enumIndex] = group + '.' + name;
                         enumValue[enumIndex++] = value;
