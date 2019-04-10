@@ -16,7 +16,7 @@ namespace GGL.IO
         byte attributesIndex;
         byte objectsIndex;
 
-        TypEnum[] attributesTyp;
+        TypName[] attributesTyp;
         bool[] attributesArray;
         string[] attributesName;
         string[] objectNames;
@@ -36,12 +36,19 @@ namespace GGL.IO
 
         private void parse(string code)
         {
-            parseToTokenList(code);
+            try
+            {
+                parseToTokenList(code);
 
-            pharseEnums();
-            pharseObjectDeclaretions();
-            pharseAttributes("Attributes");
-            parseObjectInitialization();
+                pharseEnums();
+                pharseObjectDeclaretions();
+                pharseAttributes("Attributes");
+                parseObjectInitialization();
+            }
+            catch (IndexOutOfRangeException)
+            {
+                throw new ParserException(tokenList.LastToken, "Token: \"" + tokenList.LastToken.value + "\" IndexOutOfRange");
+            }
         }
 
         private void parseToTokenList(string data)
@@ -75,7 +82,7 @@ namespace GGL.IO
                             //Console.Write(data.Substring(start, end- start+1));
                             tokenList[0].kind = 0;
                             tokenList[index].line = curLine;
-                            tokenList[index].kind = TypKind.String;
+                            tokenList[index].kind = TokenKind.String;
                             if (end != 0)
                                 tokenList[index++].value = data.Substring(start, end - start + 1)
                                     .Replace("\\\\","\\").Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t").Replace("\\\"", "\"");
@@ -103,7 +110,7 @@ namespace GGL.IO
                             //Console.Write(data.Substring(start, end- start+1));
                             tokenList[0].kind = 0;
                             tokenList[index].line = curLine;
-                            tokenList[index].kind = TypKind.String;
+                            tokenList[index].kind = TokenKind.String;
                             if (end != 0)
                                 tokenList[index++].value = data.Substring(start, end - start + 1);
                             else
@@ -115,7 +122,7 @@ namespace GGL.IO
                             //Console.ForegroundColor = ConsoleColor.Blue;
                             //Console.Write(data[i]);
                             tokenList[index].line = curLine;
-                            tokenList[index].kind = TypKind.Command;
+                            tokenList[index].kind = TokenKind.Command;
                             tokenList[index++].value = ""+data[i];
                         }
                         else if (data[i] == '\n' || data[i] == ' ' || data[i] == '\r' || data[i] == ';' || data[i] == ';')
@@ -147,7 +154,7 @@ namespace GGL.IO
                             }
                             else
                             {
-                                throw new Exception("line " + curLine + ": Unexpected symbol \"" + data[i+1] + "\"");
+                                throw new ParserException(curLine ,"Unexpected symbol \"" + data[i+1] + "\"");
                             }
                         }
                     }
@@ -209,14 +216,15 @@ namespace GGL.IO
                         array = true; index += 2;
                     }
 
-                    TypEnum typ = TypEnum.Var; //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-                    if (type[0] == 'b' && type[1] == 'y') typ = TypEnum.Byte;
-                    else if (type[0] == 'i') typ = TypEnum.Int;
-                    else if (type[0] == 'f') typ = TypEnum.Float;
-                    else if (type[0] == 'd') typ = TypEnum.Double;
-                    else if (type[0] == 'b' && type[1] == 'o') typ = TypEnum.Bool;
-                    else if (type[0] == 's') typ = TypEnum.String;
-                    else if (type[0] == 'v') typ = TypEnum.Var;
+                    TypName typ = TypName.Var; //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
+                    if (type[0] == 'b' && type[1] == 'y') typ = TypName.Byte;
+                    else if (type[0] == 'i') typ = TypName.Int;
+                    else if (type[0] == 'f') typ = TypName.Float;
+                    else if (type[0] == 'd') typ = TypName.Double;
+                    else if (type[0] == 'b' && type[1] == 'o') typ = TypName.Bool;
+                    else if (type[0] == 's') typ = TypName.String;
+                    else if (type[0] == 'r') typ = TypName.Ref;
+                    else if (type[0] == 'v') typ = TypName.Var;
 
                     int i = 0;
                     do
@@ -247,7 +255,7 @@ namespace GGL.IO
                 else if (tokenList[index + 1].value == "=")
                 {
                     int attri = compareNames(tokenList[index].value, attributesName);
-                    if (attri == -1) throw new Exception("line " + tokenList[index].line + ": Attribute \"" + tokenList[index].value + "\" is not defined");
+                    if (attri == -1) throw new ParserException(tokenList[index],"Attribute \"" + tokenList[index].value + "\" is not defined");
                     index += 2;
                     attributesInitValue[attri] = getValue(ref index, attri);
 
@@ -277,7 +285,7 @@ namespace GGL.IO
                         if (tokenList[index+1].value == "=")
                         {
                             index += 2;
-                            value = (int)readNativeValue(TypEnum.Int, ref index);
+                            value = (int)readNativeValue(TypName.Int, ref index);
                         }
                         enumNames[enumIndex] = group + '.' + name;
                         enumValue[enumIndex++] = value;
@@ -317,7 +325,7 @@ namespace GGL.IO
         {
             int index = results[id].Pos;
             if (results[id].State == 2) return;
-            else if (results[id].State == 1) throw new Exception("line " + tokenList[index].line + ": Object <" + objectNames[id] + "> is already in process");
+            else if (results[id].State == 1) throw new ParserException(tokenList[index],"Object <" + objectNames[id] + "> is already in process");
 
             results[id].State = 1;
             string parent = results[id].ParentName;
@@ -325,7 +333,7 @@ namespace GGL.IO
             if (parent != null)
             {
                 int pid = compareNames(parent, objectNames);
-                if (pid == -1) throw new Exception("line " + tokenList[index].line + ": inheriting object <"+ parent+"> is not defined");
+                if (pid == -1) throw new ParserException(tokenList[index],"Inheriting object <"+ parent+"> is not defined");
                 pharseObject(pid);
                 for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = results[pid].AttributesValue[i];
             }
@@ -338,7 +346,7 @@ namespace GGL.IO
             while (tokenList[index].value != "}")
             {
                 int attri = compareNames(tokenList[index].value, attributesName);
-                if (attri == -1) throw new Exception("line " + tokenList[index].line + ": Attribute \"" + tokenList[index].value + "\" in <" + objectNames[id] + "> is not defined");
+                if (attri == -1) throw new ParserException(tokenList[index],"Attribute \"" + tokenList[index].value + "\" in <" + objectNames[id] + "> is not defined");
                 index += 2;
                 switch (tokenList[index - 1].value)
                 {
@@ -348,11 +356,13 @@ namespace GGL.IO
                     case "+":
                         if (attributesArray[attri])
                         {
+                            if (results[id].AttributesValue[attri] == null)
+                                throw new ParserException(tokenList[index],"Array \"" + AttributeNames[attri] + "\" is null");
                             results[id].AttributesValue[attri] = combineArray(attributesTyp[attri], results[id].AttributesValue[attri], getValue(ref index, attri));
                         }
                         break;
                     default:
-                        throw new Exception("line " + tokenList[index].line + ": Unexpected token \"" + tokenList[index-1].value + "\" in <" + objectNames[id] + ">");
+                        throw new ParserException(tokenList[index],"Unexpected token \"" + tokenList[index-1].value + "\" in <" + objectNames[id] + ">");
                 }
                 index++;
             }

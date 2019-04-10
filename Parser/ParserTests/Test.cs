@@ -94,6 +94,8 @@ namespace ParserTests
             testType<double>("double", "2.46", 2.46d);
             testType<double>("double", "-2.46", -2.46d);
             testType<double>("double","2.46d", 2.46d);
+            testType<byte>("ref", 0);
+            testType<byte>("ref", "0",0);
             testType<bool>("bool", false);
             testType<bool>("bool", "false", false);
             testType<bool>("bool", "true", true);
@@ -154,6 +156,18 @@ namespace ParserTests
                 byte[] v = parser.GetAttribute<byte[]>("a", "a");
                 if (v[0] == 0 && v[1] == 1) printTest(0);
                 else printTest(1, "[" + v[0] + "," + v[1] + "]." + v.Length);
+            });
+            test("array ref[] [obj1,obj2]", () =>
+            {
+                parser.ParseCode("Attributes{ref[] v=[obj1,obj2]}<0>{}<obj1>{}<obj2>{}");
+                if (parser.GetAttribute<byte[]>(0, "v")[1] == 2) printTest(0);
+                else printTest(1);
+            });
+            test("array ref[] [obj1 to obj3]", () =>
+            {
+                parser.ParseCode("Attributes{ref[] v=[obj1 to obj3]}<0>{}<obj1>{}<obj2>{}<obj3>{}");
+                if (parser.GetAttribute<byte[]>(0, "v")[1] == 2) printTest(0);
+                else printTest(1);
             });
             test("interleaved array [[2],4]", () =>
             {
@@ -291,16 +305,50 @@ namespace ParserTests
             testExeption("circular reference", "Attributes{}<0>:1{}<1>:0{}", null);
             testExeption("heritage from undefined", "Attributes{}<0>:1{}", null);
             testExeption("undeclared attribute access", "Attributes{v=0;}<0>{}", null);
+            testExeption("undeclared enum access", "Attributes{int v;}<0>{v=enum.value}", null);
             testExeption("incompatible value", "Attributes{int v=\"x\";}<0>{}", null);
+            testExeption("empety array", "Attributes{int[] array;}<0>{array + [8,0]}", null);
+
+            Console.WriteLine("\nFile tests");
+            ctest("Load File", () =>
+            {
+                parser.Clear();
+                parser.LoadFile("../test.txt");
+                printTest(0);
+            });
+            ctest("Parse Code", () =>
+            {
+                parser.Parse();
+                printTest(0);
+            });
+            ctest("Test String", () =>
+            {
+                if (parser.GetAttribute<string>(0,"name")=="obj-0") printTest(0);
+                else printTest(1);
+            });
+            ctest("Test Number", () =>
+            {
+                if (parser.GetAttribute<int>(0, "num") == 2) printTest(0);
+                else printTest(1);
+            });
 
             float count = testOkCount + testFailCount + testErrorCount;
             Console.WriteLine("\nExecuted tests: "+ count);
             Console.WriteLine("ok: " + testOkCount + " | "+ 100*Math.Round((double)(testOkCount/count),2) + "%");
             Console.WriteLine("fail: " + testFailCount + " | " + 100 * Math.Round((double)(testFailCount / count), 2) + "%");
             Console.WriteLine("error: " + testErrorCount + " | " + 100 * Math.Round((double)(testErrorCount / count), 2) + "%");
+
         }
 
-        
+        private void ctest(string name, Action method)
+        {
+            text = name;
+            try
+            {
+                method();
+            }
+            catch (Exception e) { printTest(2, e.Message); }
+        }
         private void test(string name, Action method)
         {
             text = name;
@@ -368,6 +416,10 @@ namespace ParserTests
             }
             catch (Exception e)
             {
+                //if (e.GetType()== typeof(ParserException))
+                //{
+
+                //}
                 if (expect != null)
                     if (e.Message.ToLower() == ("line 1: " + expect).ToLower()) printTest(0);
                     else printTest(2, e.Message);

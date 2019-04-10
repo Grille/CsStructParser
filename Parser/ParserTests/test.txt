@@ -1,0 +1,19 @@
+﻿
+
+enum Enum{A=2,B=9}
+
+Attributes{
+  string name = "name";
+  byte[] array = [42];
+  int num,num2 = 42;
+}
+
+<0>{
+  name = "obj-0";
+  num = Enum.A;
+}
+<1>:0{ //inherits from obj0
+  name = "obj-1";
+  array + [3,4];
+  num = Enum.B;
+}

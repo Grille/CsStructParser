@@ -27,7 +27,7 @@ namespace GGL.IO
             initNativeTypes();
 
             attributesIndex = 0;
-            attributesTyp = new TypEnum[256];
+            attributesTyp = new TypName[256];
             attributesArray = new bool[256];
             attributesName = new string[256];
             attributesInitValue = new object[256];

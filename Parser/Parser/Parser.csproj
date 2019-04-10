@@ -85,6 +85,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\Parser.cs" />
+    <Compile Include="src\ParserExeption.cs" />
     <Compile Include="src\Parser_Interfaces.cs" />
     <Compile Include="src\Parser_Utilities.cs" />
     <Compile Include="src\Result.cs" />

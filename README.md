@@ -48,3 +48,7 @@ obj1:
 -number 42 //inherited from obj0
 -array [1,2,3,4] //add obj0.array values to obj1.array values
 ````
+## Types
+````cs
+byte, int, float,  double, bool, string
+````

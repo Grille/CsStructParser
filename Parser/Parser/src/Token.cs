@@ -8,7 +8,7 @@ namespace GGL.IO
     unsafe struct Token
     {
         public int line;
-        public TypKind kind;
+        public TokenKind kind;
         public string value;
     }
 }
