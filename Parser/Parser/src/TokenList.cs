@@ -1,40 +1,49 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
-namespace GGL.IO
+namespace Grille.Parsing.Tcf
 {
-    class TokenList
+    internal class TokenList
     {
-        Token[] tokens;
-        int index;
-        public TokenList(int length)
+        public Token[] Tokens { get; }
+
+        public TokenList(Token[] tokens)
         {
-            tokens = new Token[length];
+            Tokens = tokens;
         }
-        public int Length
+
+        public Token Get(int position)
         {
-            get => tokens.Length;
-            set
+            if (position >= Tokens.Length)
             {
-                Array.Resize(ref tokens, value);
+                throw new TcfParserException(Tokens[Length - 1].Line, "Unexpected End of File.");
             }
+            return Tokens[position];
         }
-        public ref Token LastToken
+
+        public int FindIndexOf(TokenKind kind, string value)
         {
-            get
+            for (int i = 0; i < Tokens.Length; i++)
             {
-                return ref tokens[index];
+                if (Tokens[i].Kind == kind && Tokens[i].Value == value) return i;
             }
+            return -1;
         }
-        public ref Token this[int i]
+
+        public int FindIndexOf(string value)
         {
-            get
+            for (int i = 0; i < Tokens.Length; i++)
             {
-                index = i;
-                return ref tokens[i];
+                if (Tokens[i].Value == value) return i;
             }
+            return -1;
         }
+
+        public Token this[int index] => Get(index);
+
+        public int Length => Tokens.Length;
     }
 }

@@ -1,32 +1,32 @@
-﻿using System;
+﻿using Grille.Parsing;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
-namespace GGL.IO
+namespace Grille.Parsing.Tcf
 {
-    public enum TypName { Byte, Int, Float,  Double, Bool, String, Ref,Var};
-    public enum TokenKind { Other, Number, Bool, String,Command};
+    public enum TypeName { Byte, Int, Float,  Double, Bool, String, Ref, Var};
 
-    public partial class Parser
+    public partial class TcfParser
     {
-        char[] commandChars = new char[] { ',', '{', '}', '[', ']', '=', '+', '-', '*', '/', ':', '<', '>', '>' };
-        char[] endChars = new char[] { '\n', ' ', '\r', ';', ';' };
+        private void assertToken(int index, TokenKind kind, string value)
+        {
+            if (!tokens[index].Equals(kind, value))
+                throw new TcfParserException(tokens[index]);
+        }
 
-        private void setCode(string code)
+        private void assertToken(int index, TokenKind kind)
         {
-            codeLoaded = true;
-            objectDeclaretionsParsed = attributesParsed = objectInitializationParsed = false;
-            this.code = code;
+            if (!tokens[index].Equals(kind))
+                throw new TcfParserException(tokens[index]);
         }
-        private void initNativeTypes()
-        {
-            //types[typesIndex] = new Typ("int")
-        }
+
         private int referseToTokenIndex(int index,string value)
         {
             for (int i = index; i > 0; i--)
-                if (tokenList[i].value == value)
+                if (tokens[i].Value == value)
                     return i;
             return -1;
         }
@@ -34,39 +34,22 @@ namespace GGL.IO
         {
             for (int i = index; i > 0; i--)
                 for (int i2 = 0; i2 < value.Length; i2++)
-                    if (tokenList[i].value == value[i2])
+                    if (tokens[i].Value == value[i2])
                         return i;
             return -1;
         }
-        private int searchTokenIndex(string name)
+
+        private int findIndexByName<T>(string key, IList<T> list) where T : IHasName
         {
-            for (int i = 0;i< tokenList.Length; i++)
+            for (int i = 0; i < list.Count; i++)
             {
-                if (tokenList[i].value == name) return i;
+                if (list[i].Name == key) return i;
             }
             return -1;
         }
-        private int compareNames(string name, string[] nameList)
-        {
-            return compareNames(name, nameList, nameList.Length);
-        }
-        private int compareNames(string name,string[] nameList,int lenght)
-        {
-            for (int i = 0; i < lenght; i++)
-            {
-                if (name == nameList[i])
-                {
-                    return i;
-                }
-            }
-            return -1;
-        }
-        private object getValue(ref int index, int attrIndex)
-        {
 
-            TypName typ = attributesTyp[attrIndex];
-            var array = attributesArray[attrIndex];
-
+        private object getValue(ref int index, TypeName typ, bool array)
+        {
             object retValue = null;
 
             if (!array)
@@ -77,13 +60,13 @@ namespace GGL.IO
                 int size = testArraySize(typ,index);
                 switch (typ)
                 {
-                    case TypName.Ref:
-                    case TypName.Byte: retValue = new byte[size];break;
-                    case TypName.Int: retValue = new int[size]; break;
-                    case TypName.Float: retValue = new float[size]; break;
-                    case TypName.Double: retValue = new double[size]; break;
-                    case TypName.Bool: retValue = new bool[size]; break;
-                    case TypName.String: retValue = new string[size]; break;
+                    case TypeName.Byte: retValue = new byte[size];break;
+                    case TypeName.Ref:
+                    case TypeName.Int: retValue = new int[size]; break;
+                    case TypeName.Float: retValue = new float[size]; break;
+                    case TypeName.Double: retValue = new double[size]; break;
+                    case TypeName.Bool: retValue = new bool[size]; break;
+                    case TypeName.String: retValue = new string[size]; break;
                 }
                 
                 if (size == 0)
@@ -98,14 +81,14 @@ namespace GGL.IO
                 while (scope > 0)
                 {
                     index+=1;
-                    switch (tokenList[index].value)
+                    switch (tokens[index].Value)
                     {
                         case "[":scope++; break;
                         case "]":scope--; break;
                         case ",": break;
                         default:
                             object value = readNativeValue(typ, ref index);
-                            if (tokenList[index + 1].value == "to")
+                            if (tokens[index + 1].Value == "to")
                             {
                                 index+=2;
                                 int v1 = Convert.ToInt32(value);
@@ -124,145 +107,131 @@ namespace GGL.IO
             }
             return retValue;
         }
-        private TokenKind testTypKind(string value)
-        {
-            if (value == "true" || value == "false")
-                return TokenKind.Bool;
-            switch (value[0])
-            {
-                case '0':case '1':case '2':case '3':case '4':
-                case '5':case '6':case '7':case '8':case '9':
-                    return TokenKind.Number;
-                case '"':
-                    return TokenKind.String;
-                case '=':case '+':case '-':case '*':case '/':
-                case ',':
-                case '{':
-                case '}':
-                case '(':
-                case ')':
-                case '[':
-                case ']':
-                case ':':
-                case '<':
-                case '>':
-                case ';':
-                    return TokenKind.Command;
-            }
-            return TokenKind.Other;
-        }
 
-        private void addValueToArray(ref object array, TypName typ, object value, int index)
+        private void addValueToArray(ref object array, TypeName typ, object value, int index)
         {
             switch (typ)
             {
-                case TypName.Ref:
-                case TypName.Byte: ((byte[])array)[index] = Convert.ToByte(value); break;
-                case TypName.Int: ((int[])array)[index] = Convert.ToInt32(value); break;
-                case TypName.Float: ((float[])array)[index] = Convert.ToSingle(value); break;
-                case TypName.Double: ((double[])array)[index] = Convert.ToDouble(value); break;
-                case TypName.Bool: ((bool[])array)[index] = Convert.ToBoolean(value); break;
-                case TypName.String: ((string[])array)[index] = (string)value; break;
+                case TypeName.Byte: ((byte[])array)[index] = Convert.ToByte(value); break;
+                case TypeName.Ref:
+                case TypeName.Int: ((int[])array)[index] = Convert.ToInt32(value); break;
+                case TypeName.Float: ((float[])array)[index] = Convert.ToSingle(value); break;
+                case TypeName.Double: ((double[])array)[index] = Convert.ToDouble(value); break;
+                case TypeName.Bool: ((bool[])array)[index] = Convert.ToBoolean(value); break;
+                case TypeName.String: ((string[])array)[index] = (string)value; break;
             }
         }
-        private void readValueToArray(ref object array, TypName typ, ref int pos,int index)
+
+        private void readValueToArray(ref object array, TypeName typ, ref int pos,int index)
         {
             addValueToArray(ref array, typ, readNativeValue(typ, ref pos), index);
         }
-        private object readNativeValue(TypName typ, int index)
+
+        private object readNativeValue(TypeName typ, int index)
         {
             return readNativeValue(typ, ref index);
         }
-        private object readNativeValue(TypName typ,ref int index)
+
+        private object readNativeValue(TypeName typ, ref int index)
         {
             double neg = 1;
-            //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-            if (typ == TypName.Byte|| typ == TypName.Int|| typ == TypName.Float|| typ == TypName.Double)
+            if (typ == TypeName.Byte|| typ == TypeName.Int|| typ == TypeName.Float|| typ == TypeName.Double)
             {
                 bool enableRet = false;
                 int retValue = 0;
-                if (tokenList[index].value == "-")
+
+                var token = tokens[index];
+
+                if (token.Value == "-")
                 {
                     neg = -1;
                     index++;
                 }
-                else if (tokenList[index].value == "+")
+                else if (token.Value == "+")
                     index++;
-                else if (tokenList[index].value == "&")
+                else if (token.Value == "&")
                 {
-                    index++;
-                    int indx = compareNames(tokenList[index].value, objectNames, objectsIndex);
-                    if (indx == -1) throw new ParserException(tokenList[index],"Object \"" + tokenList[index].value + "\" is not defined");
+                    token = tokens[++index];
+                    int indx = findIndexByName(token.Value, objects);
+                    if (indx == -1) throw new TcfParserException(token, "Object \"" + token.Value + "\" is not defined.");
                     retValue = indx; enableRet = true;
                 }
-                else if (tokenList[index].kind == TokenKind.Other)
+                else if (token.Kind == TokenKind.Word)
                 {
-                    int indx = compareNames(tokenList[index].value, enumNames, enumIndex);
-                    if (indx == -1) throw new ParserException(tokenList[index],"Enum \"" + tokenList[index].value + "\" is not defined");
-                    retValue = enumValue[indx]; enableRet = true;
+                    if (Constants.TryGetValue(token.Value, out retValue))
+                    {
+                        enableRet = true;
+                    }
+                    else
+                    {
+                        throw new TcfParserException(token, "Enum \"" + token.Value + "\" is not defined.");
+                    }
                 }
                 if (enableRet)
                 {
                     switch (typ)
                     {
-                        case TypName.Byte: return (byte)retValue;
-                        case TypName.Int: return (int)retValue;
-                        case TypName.Float: return (float)retValue;
-                        case TypName.Double: return (double)retValue;
+                        case TypeName.Byte: return (byte)retValue;
+                        case TypeName.Int: return (int)retValue;
+                        case TypeName.Float: return (float)retValue;
+                        case TypeName.Double: return (double)retValue;
                     }
                 }
             }
             
-            string value = tokenList[index].value;
+            string value = tokens[index].Value;
             try
             {
                 switch (typ)
                 {
-                    case TypName.Byte: return (byte)(Convert.ToByte(value) * neg);
-                    case TypName.Int: return (int)(Convert.ToInt32(value) * neg);
-                    case TypName.Float: return (float)(Convert.ToSingle(value.Replace('.', ',').TrimEnd('f')) * neg);
-                    case TypName.Double: return (double)(Convert.ToDouble(value.Replace('.', ',').TrimEnd('d')) * neg);
-                    case TypName.Bool:
+                    case TypeName.Byte: return (byte)(Convert.ToByte(value) * neg);
+                    case TypeName.Int: return (int)(Convert.ToInt32(value) * neg);
+                    case TypeName.Float: return (float)(Convert.ToSingle(value.Replace('.', ',').TrimEnd('f')) * neg);
+                    case TypeName.Double: return (double)(Convert.ToDouble(value.Replace('.', ',').TrimEnd('d')) * neg);
+                    case TypeName.Bool:
                         if (value == "0") return false;
                         else if (value == "1") return true;
                         return Convert.ToBoolean(value);
-                    case TypName.Ref: int id = compareNames(value,objectNames);
-                        if (id ==-1) throw new ParserException(tokenList[index], "Object \"" + tokenList[index].value + "\" is not defined");
+                    case TypeName.Ref: 
+                        int id = findIndexByName(value,objects);
+                        if (id ==-1) throw new TcfParserException(tokens[index], "Object \"" + tokens[index].Value + "\" is not defined");
                         return (byte)id;
-                    case TypName.String: return value;
+                    case TypeName.String: return value;
                     default: return null;
                 }
             }
-            catch (FormatException e)
+            catch (FormatException)
             {
-                throw new ParserException(tokenList[index],"Value \"" + tokenList[index].value + "\" is not a "+(TypName)typ);
+                throw new TcfParserException(tokens[index],"Value \"" + tokens[index].Value + "\" is not a "+(TypeName)typ);
             }
         }
-        private object defaultTypValue(TypName typ,bool array)
+
+        private object defaultTypValue(TypeName typ,bool array)
         {
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
             if (!array)
                 switch (typ)
                 {
-                    case TypName.Ref:
-                    case TypName.Byte: return (byte)0;
-                    case TypName.Int: return (int)0;
-                    case TypName.Float: return (float)0;
-                    case TypName.Double: return (double)0;
-                    case TypName.Bool: return false;
+                    case TypeName.Byte: return (byte)0;
+                    case TypeName.Ref:
+                    case TypeName.Int: return (int)0;
+                    case TypeName.Float: return (float)0;
+                    case TypeName.Double: return (double)0;
+                    case TypeName.Bool: return false;
                 }
             return null;
         }
-        private int testArraySize(TypName typ,int index)
+
+        private int testArraySize(TypeName typ,int index)
         {
             int scope = 0;
             int size = 0;
             do
             {
-                switch (tokenList[index].value)
+                switch (tokens[index].Value)
                 {
                     case "[":scope++;
-                        if (tokenList[index+1].value == "]") return 0;
+                        if (tokens[index+1].Value == "]") return 0;
                         break;
                     case "]":scope--;break;
                     case ",":size++;break;
@@ -275,22 +244,24 @@ namespace GGL.IO
             return size+1;
 
         }
-        private object combineArray(TypName typ,object array1,object array2)
+
+        private object combineArray(TypeName typ,object array1,object array2)
         {
             //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
             switch (typ)
             {
-                case TypName.Ref:
-                case TypName.Byte: return combineArray((byte[])array1, (byte[])array2);
-                case TypName.Int: return combineArray((int[])array1, (int[])array2);
-                case TypName.Float: return combineArray((float[])array1, (float[])array2);
-                case TypName.Double: return combineArray((double[])array1, (double[])array2);
-                case TypName.Bool: return combineArray((bool[])array1, (bool[])array2);
-                case TypName.String: return combineArray((string[])array1, (string[])array2);
+                case TypeName.Byte: return CombineArray((byte[])array1, (byte[])array2);
+                case TypeName.Ref:
+                case TypeName.Int: return CombineArray((int[])array1, (int[])array2);
+                case TypeName.Float: return CombineArray((float[])array1, (float[])array2);
+                case TypeName.Double: return CombineArray((double[])array1, (double[])array2);
+                case TypeName.Bool: return CombineArray((bool[])array1, (bool[])array2);
+                case TypeName.String: return CombineArray((string[])array1, (string[])array2);
             }
             return null;
         }
-        private T[] combineArray<T>(T[] array1, T[] array2)
+
+        private static T[] CombineArray<T>(T[] array1, T[] array2)
         {
             T[] array = new T[array1.Length + array2.Length];
             array1.CopyTo(array, 0);

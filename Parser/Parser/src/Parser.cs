@@ -2,265 +2,115 @@
 using System;
 using System.Threading;
 using System.Reflection;
-namespace GGL.IO
+using Grille.Parsing;
+using System.Collections.Generic;
+namespace Grille.Parsing.Tcf
 {
-    public unsafe partial class Parser
+    public partial class TcfParser
     {
-        private int parserState;
+        TokenList tokens;
 
-        int typesIndex;
-        Typ[] types;
-        string code;
-        TokenList tokenList;
+        public Dictionary<string, TcfType> Types { get; }
+        public Dictionary<string, int> Constants { get; }
 
-        byte attributesIndex;
-        byte objectsIndex;
+        int objectIndex;
+        List<TcfObjectParserCtx> objects;
+        public Dictionary<string, TcfObject> Result { get; private set; }
 
-        TypName[] attributesTyp;
-        bool[] attributesArray;
-        string[] attributesName;
-        string[] objectNames;
-        Object[] attributesInitValue;
-
-        int enumIndex;
-        int[] enumValue;
-        string[] enumNames;
-
-        Struct[] results;
+        public TcfType DefaultType { get; }
 
         bool codeLoaded, objectDeclaretionsParsed, attributesParsed, objectInitializationParsed;
-        public Parser()
+
+        public string GlobalTypeDefName { get; set; } = "Attributes";
+
+        public TcfParser()
         {
-            Clear();
+            DefaultType = new TcfType("0_default");
+            Types = new Dictionary<string, TcfType>();
+            Constants = new Dictionary<string, int>();
+            objects = new List<TcfObjectParserCtx>();
+            Result = new Dictionary<string, TcfObject>();
         }
 
         private void parse(string code)
         {
-            try
-            {
-                parseToTokenList(code);
+            tokens = new TokenList(Lexer.Tokenize(code));
 
-                pharseEnums();
-                pharseObjectDeclaretions();
-                pharseAttributes("Attributes");
-                parseObjectInitialization();
-            }
-            catch (IndexOutOfRangeException)
-            {
-                throw new ParserException(tokenList.LastToken, "Token: \"" + tokenList.LastToken.value + "\" IndexOutOfRange");
+            parseDefinitions();
+            parseInitializations();
+
+            while (objectIndex < objects.Count) {
+                var ctx = objects[objectIndex];
+                Result[ctx.Name] = ctx.Object;
+                objectIndex += 1;
             }
         }
 
-        private void parseToTokenList(string data)
+        private void parseTypeDef(int index, TcfType cfgtype)
         {
-            tokenList = new TokenList(data.Length);
-            int index = 0;
-            int curLine = 1;
-            int commentMode = 0;
-            for (int i = 0; i < data.Length; i++)
-            {
-                if (data[i] == '\n')
-                    curLine++;
-                if (commentMode == 0)
-                {
-                    if (data[i] == '/' && data[i + 1] == '/') commentMode = 1;
-                    else if (data[i] == '/' && data[i + 1] == '*') commentMode = 2;
-                    else
-                    {
-                        if (data[i] == '"')
-                        {
-                            i += 1;
-                            int start = i, end = 0;
-                            while (data[i] != '"' || data[i-1] == '\\')
-                            {
-                                if (data[i] == '\n')
-                                    curLine++;
-                                end = i++;
-                            }
-                            // += 1;
-                            //Console.ForegroundColor = ConsoleColor.Red;
-                            //Console.Write(data.Substring(start, end- start+1));
-                            tokenList[0].kind = 0;
-                            tokenList[index].line = curLine;
-                            tokenList[index].kind = TokenKind.String;
-                            if (end != 0)
-                                tokenList[index++].value = data.Substring(start, end - start + 1)
-                                    .Replace("\\\\","\\").Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t").Replace("\\\"", "\"");
-                            else
-                                tokenList[index++].value = "";
+            assertToken(index, TokenKind.Symbol, "{");
 
-                        }
-                        else if (data[i] == '('&& data[i+1] == ')'&& data[i+2] == '{')
-                        {
-                            i += 3;
-                            int start = i, end = 0;
-                            int scope = 0;
-                            while (data[i] != '}' || scope > 0)
-                            {
-                                switch (data[i])
-                                {
-                                    case '{': scope++; break;
-                                    case '}': scope--; break;
-                                    case '\n': curLine++; break;
-                                }
-                                end = i++;
-                            }
-                            // += 1;
-                            //Console.ForegroundColor = ConsoleColor.Red;
-                            //Console.Write(data.Substring(start, end- start+1));
-                            tokenList[0].kind = 0;
-                            tokenList[index].line = curLine;
-                            tokenList[index].kind = TokenKind.String;
-                            if (end != 0)
-                                tokenList[index++].value = data.Substring(start, end - start + 1);
-                            else
-                                tokenList[index++].value = "";
-
-                        }
-                        else if (data[i] == ',' || data[i] == '{' || data[i] == '}' || data[i] == '[' || data[i] == ']' || data[i] == '=' || data[i] == '+' || data[i] == '-' || data[i] == '*' || data[i] == '/' || data[i] == ':' || data[i] == '<' || data[i] == '>'|| data[i] == '&')
-                        {
-                            //Console.ForegroundColor = ConsoleColor.Blue;
-                            //Console.Write(data[i]);
-                            tokenList[index].line = curLine;
-                            tokenList[index].kind = TokenKind.Command;
-                            tokenList[index++].value = ""+data[i];
-                        }
-                        else if (data[i] == '\n' || data[i] == ' ' || data[i] == '\r' || data[i] == ';' || data[i] == ';')
-                        {
-                            /*
-                            Console.BackgroundColor = ConsoleColor.DarkRed;
-                            Console.ForegroundColor = ConsoleColor.White;
-                            Console.Write(data[i]);
-                            Console.BackgroundColor = ConsoleColor.Black;
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            */
-                        }
-                        else
-                        {
-                            int start = i, end = 0;
-                            while ((data[i] >= 65 && data[i] <= 90) || (data[i] >= 97 && data[i] <= 122) || (data[i] >= 48 && data[i] <= 57) || data[i] == 95 || data[i] == 46)
-                            {
-                                end = i++;
-                            }
-                            i -= 1;
-                            if (end!=0)
-                            {
-                                //Console.ForegroundColor = ConsoleColor.Gray;
-                                //Console.Write(data.Substring(start, end - start + 1)+" ");
-
-                                tokenList[index].value = data.Substring(start, end - start + 1);
-                                tokenList[index].kind = testTypKind(tokenList[index].value);
-                                tokenList[index++].line = curLine;
-                            }
-                            else
-                            {
-                                throw new ParserException(curLine ,"Unexpected symbol \"" + data[i+1] + "\"");
-                            }
-                        }
-                    }
-                }
-                else if (commentMode == 1 && data[i] == '\n') commentMode = 0;
-                else if (commentMode == 2 && data[i] == '*' && data[i + 1] == '/') { commentMode = 0; i++; }
-            }
-            tokenList.Length = index;
-
-            //Array.Resize(ref tokenList, index);
-
-            
-            //Console.WriteLine(tokenList.Length);
-            /*
-            for (int i = 0; i < tokenList.Length; i++)
-            {
-                bool space = false;
-                switch (tokenList[i].kind)
-                {
-                    case TypKind.Command:
-                        Console.ForegroundColor = ConsoleColor.Blue;
-                        break;
-                    case TypKind.Number:
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        break;
-                    case TypKind.String:
-                        Console.ForegroundColor = ConsoleColor.DarkYellow;
-                        space = true;
-                        break;
-                    default:
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                        space = true;
-                        break;
-                }
-                Console.Write(tokenList[i].value + (space?" ":""));
-            }
-            Console.WriteLine();
-            */
-            
-
-        }
-
-
-        private void pharseAttributes(string fnname)
-        {
-            int index = searchTokenIndex(fnname);
-            if (index == -1) return;
-            index += 2;
-            while (tokenList[index].value != "}")
+            index += 1;
+            while (tokens[index].Value != "}")
             {
                 //Console.ForegroundColor = ConsoleColor.Green;
                 bool array = false;
                 string type;
-                if (tokenList[index + 1].value != "=")
+                if (tokens[index + 1].Value != "=")
                 {
-                    type = tokenList[index++].value;
-                    if (tokenList[index].value == "[")
+                    type = tokens[index++].Value;
+                    if (tokens[index].Value == "[")
                     {
                         array = true; index += 2;
                     }
 
-                    TypName typ = TypName.Var; //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
-                    if (type[0] == 'b' && type[1] == 'y') typ = TypName.Byte;
-                    else if (type[0] == 'i') typ = TypName.Int;
-                    else if (type[0] == 'f') typ = TypName.Float;
-                    else if (type[0] == 'd') typ = TypName.Double;
-                    else if (type[0] == 'b' && type[1] == 'o') typ = TypName.Bool;
-                    else if (type[0] == 's') typ = TypName.String;
-                    else if (type[0] == 'r') typ = TypName.Ref;
-                    else if (type[0] == 'v') typ = TypName.Var;
+                    TypeName typ = TypeName.Var; //0 byte, 1 int, 2 float, 3 double, 4 bool, 5 string, 6 var,7 cond
+                    if (type[0] == 'b' && type[1] == 'y') typ = TypeName.Byte;
+                    else if (type[0] == 'i') typ = TypeName.Int;
+                    else if (type[0] == 'f') typ = TypeName.Float;
+                    else if (type[0] == 'd') typ = TypeName.Double;
+                    else if (type[0] == 'b' && type[1] == 'o') typ = TypeName.Bool;
+                    else if (type[0] == 's') typ = TypeName.String;
+                    else if (type[0] == 'r') typ = TypeName.Ref;
+                    else if (type[0] == 'v') typ = TypeName.Var;
 
                     int i = 0;
                     do
                     {
                         if (i++ > 0) index += 2;
-                        string name = tokenList[index].value;
-                        object value = null;
+                        string name = tokens[index].Value;
+                        object value;
 
-                        attributesTyp[attributesIndex] = typ;
-                        attributesArray[attributesIndex] = array;
-                        attributesName[attributesIndex] = tokenList[index].value;
-                        if (tokenList[index + 1].value == "=")
+                        if (tokens[index + 1].Value == "=")
                         {
                             index += 2;
-                            value = getValue(ref index, attributesIndex);
-                            attributesInitValue[attributesIndex] = value;
+                            value = getValue(ref index, typ, array);
                         }
                         else
                         {
-                            attributesInitValue[attributesIndex] = defaultTypValue(typ,array);
+                            value = defaultTypValue(typ, array);
                         }
-                        attributesIndex++;
+
+                        cfgtype.CreateProperty(typ, array, name, value);
 
                         //Console.WriteLine(type + "[" + array + "]->" + name + (value != null ? ("=" + value) : "") + ";");
-                    } while (tokenList[index + 1].value == ",");
+                    } while (tokens[index + 1].Value == ",");
 
                 }
-                else if (tokenList[index + 1].value == "=")
+                else if (tokens[index + 1].Value == "=")
                 {
-                    int attri = compareNames(tokenList[index].value, attributesName);
-                    if (attri == -1) throw new ParserException(tokenList[index],"Attribute \"" + tokenList[index].value + "\" is not defined");
+                    int attri = findIndexByName(tokens[index].Value, cfgtype.Properties);
+                    if (attri == -1) throw new TcfParserException(tokens[index], "Attribute \"" + tokens[index].Value + "\" is not defined");
                     index += 2;
-                    attributesInitValue[attri] = getValue(ref index, attri);
+                    var property = cfgtype.Properties[attri];
+                    property.DefaultValue = getValue(ref index, property.Type, property.IsArray);
 
                     //Console.ForegroundColor = ConsoleColor.Red;
                     //Console.WriteLine(attributesName[attri]+"="+attributesInitValue[attri]+";");
+                }
+                else
+                {
+                    throw new TcfParserException(tokens[index + 1]);
                 }
 
                 //Console.ForegroundColor = ConsoleColor.Blue;
@@ -270,103 +120,203 @@ namespace GGL.IO
             //Console.WriteLine("attributesIndex " + attributesIndex);
         }
 
-        private void pharseEnums()
+        private void parseDefinitions()
         {
-            for (int index = 0; index < tokenList.Length; index++)
+            int scope = 0;
+            for (int index = 0; index < tokens.Length; index++)
             {
-                if (tokenList[index].value == "enum")
+                if (tokens[index].Equals(TokenKind.Symbol, "{"))
                 {
-                    int value = 0;
-                    string group = tokenList[index+1].value,name = "";
-                    index += 3;
-                    while (tokenList[index].value != "}")
+                    scope += 1;
+                }
+                else if (tokens[index].Equals(TokenKind.Symbol, "}"))
+                {
+                    scope -= 1;
+                    if (scope < 0)
                     {
-                        name = tokenList[index].value;
-                        if (tokenList[index+1].value == "=")
-                        {
-                            index += 2;
-                            value = (int)readNativeValue(TypName.Int, ref index);
-                        }
-                        enumNames[enumIndex] = group + '.' + name;
-                        enumValue[enumIndex++] = value;
-                        if (tokenList[index+1].value == ",")
-                        {
-                            value++;
-                            index++;
-                        }
-                        index++;
+                        throw new TcfParserException(tokens[index], "Scope -1");
                     }
                 }
-            }
-        }
 
-        private void pharseObjectDeclaretions()
-        {
-            for (int i = 0; i < tokenList.Length; i++)
-            {
-                if (tokenList[i].value != "<") continue;
-                string name = tokenList[i+1].value;
-                string pid = null;i += 3;
-                if (tokenList[i].value == ":")
+                else if (scope == 0)
                 {
-                    pid = tokenList[i + 1].value; i+=2;
+                    if (tokens[index].Equals(TokenKind.Word))
+                    {
+                        if (tokens[index].Equals(GlobalTypeDefName))
+                        {
+                            parseTypeDef(index + 1, DefaultType);
+                        }
+                        else if (tokens[index].Equals("const"))
+                        {
+                            index += 1;
+                            string name = tokens[index].Value;
+
+                            index += 1;
+                            assertToken(index, TokenKind.Symbol, "=");
+
+                            index += 1;
+                            int value = (int)readNativeValue(TypeName.Int, ref index);
+
+                            AddConst(name, value);
+                        }
+                        else if (tokens[index].Equals("enum"))
+                        {
+                            int value = 0;
+                            string group = tokens[index + 1].Value, name;
+
+                            assertToken(index + 2, TokenKind.Symbol, "{");
+
+                            index += 3;
+                            while (tokens[index].Value != "}")
+                            {
+                                name = tokens[index].Value;
+                                if (tokens[index + 1].Value == "=")
+                                {
+                                    index += 2;
+                                    value = (int)readNativeValue(TypeName.Int, ref index);
+                                }
+
+                                AddEnum(group, name, value);
+
+                                if (tokens[index + 1].Value == ",")
+                                {
+                                    value++;
+                                    index++;
+                                }
+                                index++;
+                            }
+                        }
+                        else if (tokens[index].Equals("typedef"))
+                        {
+                            index += 1;
+                            assertToken(index, TokenKind.Word);
+                            var name = tokens[index].Value;
+                            var type = new TcfType(name);
+
+                            parseTypeDef(index + 1, type);
+                            Types.Add(name, type);
+                        }
+                        else
+                        {
+                            var typename = tokens[index].Value;
+
+                            if (Types.TryGetValue(typename, out var type))
+                            {
+                                index += 1;
+                                string name = tokens[index].Value;
+                                string parent = null;
+                                if (tokens[index + 1].Value == ":")
+                                {
+                                    parent = tokens[index + 2].Value;
+                                    index += 2;
+                                }
+
+                                assertToken(index + 1, TokenKind.Symbol, "{");
+
+                                var obj = new TcfObjectParserCtx(type, name, parent, index + 1);
+                                objects.Add(obj);
+                            }
+                            else
+                            {
+                                throw new TcfParserException(tokens[index], "Type not found.");
+                            }
+
+                        }
+                    }
+                    if (tokens[index].Equals(TokenKind.Symbol, "<"))
+                    {
+                        index += 1;
+                        string name = tokens[index].Value;
+
+                        index += 1;
+                        assertToken(index, TokenKind.Symbol, ">");
+
+                        string parent = null;
+                        if (tokens[index + 1].Value == ":")
+                        {
+                            parent = tokens[index + 2].Value;
+                            index += 2;
+                        }
+
+                        assertToken(index + 1, TokenKind.Symbol, "{");
+
+                        var obj = new TcfObjectParserCtx(DefaultType, name, parent, index + 1);
+                        objects.Add(obj);
+                    }
+
                 }
-                objectNames[objectsIndex] = name;
-                results[objectsIndex].Declare(i, pid);
-                objectsIndex++;
             }
         }
-        private void parseObjectInitialization()
+
+        private void parseInitializations()
         {
-            for (int i = 0; i < objectsIndex; i++) results[i].Define(attributesIndex);
-            for (int i = 0; i < objectsIndex; i++) pharseObject(i);
+            for (int i = 0; i < objects.Count; i++) parseObject(objects[i]);
         }
-        private void pharseObject(int id)
+        private void parseObject(TcfObjectParserCtx ctx)
         {
-            int index = results[id].Pos;
-            if (results[id].State == 2) return;
-            else if (results[id].State == 1) throw new ParserException(tokenList[index],"Object <" + objectNames[id] + "> is already in process");
 
-            results[id].State = 1;
-            string parent = results[id].ParentName;
+            var type = ctx.Object.Type;
 
-            if (parent != null)
+            int index = ctx.TokenIndex;
+            if (ctx.State == ParseStatus.Done) return;
+            else if (ctx.State == ParseStatus.Parsing) throw new TcfParserException(tokens[index].Line, $"Object <{type.Name} {ctx.Name}> is already in process, possible circular reference.");
+
+            ctx.State = ParseStatus.Parsing;
+            string parentName = ctx.ParentName;
+
+            ctx.Object.Init();
+            var values = ctx.Values;
+
+            if (parentName != null)
             {
-                int pid = compareNames(parent, objectNames);
-                if (pid == -1) throw new ParserException(tokenList[index],"Inheriting object <"+ parent+"> is not defined");
-                pharseObject(pid);
-                for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = results[pid].AttributesValue[i];
+                int pid = findIndexByName(parentName, objects);
+                if (pid == -1)
+                {
+                    throw new TcfParserException(tokens[index].Line, "Inheriting object <" + parentName + "> is not defined");
+                }
+
+                var parrent = objects[pid];
+                if (type != parrent.Object.Type)
+                {
+                    throw new TcfParserException(tokens[index].Line, $"<{type.Name} {ctx.Name}> can not inherent from <{parrent.Object.Type.Name} {parentName}>.");
+                }
+
+                parseObject(parrent);
+                for (int i = 0; i < type.Properties.Count; i++) values[i] = parrent.Values[i];
             }
             else
             {
-                for (int i = 0; i < attributesIndex; i++) results[id].AttributesValue[i] = attributesInitValue[i];
+                for (int i = 0; i < type.Properties.Count; i++) values[i] = type.Properties[i].DefaultValue;
             }
 
+            assertToken(index, TokenKind.Symbol, "{");
             index += 1;
-            while (tokenList[index].value != "}")
+
+            while (tokens[index].Value != "}")
             {
-                int attri = compareNames(tokenList[index].value, attributesName);
-                if (attri == -1) throw new ParserException(tokenList[index],"Attribute \"" + tokenList[index].value + "\" in <" + objectNames[id] + "> is not defined");
+                int attri = findIndexByName(tokens[index].Value, type.Properties);
+                if (attri == -1) throw new TcfParserException(tokens[index], "Attribute \"" + tokens[index].Value + "\" in <" + ctx.Name + "> is not defined.");
                 index += 2;
-                switch (tokenList[index - 1].value)
+                var property = type.Properties[attri];
+                switch (tokens[index - 1].Value)
                 {
                     case "=":
-                        results[id].AttributesValue[attri] = getValue(ref index, attri);
+                        values[attri] = getValue(ref index, property.Type, property.IsArray);
                         break;
                     case "+":
-                        if (attributesArray[attri])
+                        if (property.IsArray)
                         {
-                            if (results[id].AttributesValue[attri] == null)
-                                throw new ParserException(tokenList[index],"Array \"" + AttributeNames[attri] + "\" is null");
-                            results[id].AttributesValue[attri] = combineArray(attributesTyp[attri], results[id].AttributesValue[attri], getValue(ref index, attri));
+                            if (values[attri] == null)
+                                throw new TcfParserException(tokens[index], "Array \"" + type.Properties[attri].Name + "\" is null");
+                            values[attri] = combineArray(property.Type, values[attri], getValue(ref index, property.Type, property.IsArray));
                         }
                         break;
                     default:
-                        throw new ParserException(tokenList[index],"Unexpected token \"" + tokenList[index-1].value + "\" in <" + objectNames[id] + ">");
+                        throw new TcfParserException(tokens[index], "Unexpected token \"" + tokens[index - 1].Value + "\" in <" + ctx.Name + ">");
                 }
                 index++;
             }
-            results[id].State = 2;
+            ctx.State = ParseStatus.Done;
         }
     }
 }

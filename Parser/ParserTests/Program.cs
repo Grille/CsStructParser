@@ -10,7 +10,7 @@ namespace ParserTests
     {
         static void Main(string[] args)
         {
-            var test = new Test();
+            var test = new Tests();
             test.Run();
             Console.ReadKey();
         }

@@ -3,97 +3,59 @@ using System;
 using System.Reflection;
 using System.Collections.Generic;
 
-namespace GGL.IO
+namespace Grille.Parsing.Tcf
 {
-    public partial class Parser
+    public partial class TcfParser
     {
-
-        public int ObjectCount { get { return objectsIndex; } }
+        public int ObjectCount { get { return objects.Count; } }
         /// <summary>Test if an object exists with this id.</summary>
         public bool Exists(int number)
         {
-            return Exists("" + number);
+            return Exists(number.ToString());
         }
         /// <summary>Test if an object exists with this name.</summary>
         public bool Exists(string name)
         {
-            return compareNames(name,objectNames) != -1;
+            return findIndexByName(name, objects) != -1;
         }
-        /// <summary>Removes all previously added attributes, enums and objects.</summary>
-        public void Clear()
+        /// <summary>Removes all previously added objects.</summary>
+        public void ClearResults()
         {
-            typesIndex = 0;
-            types = new Typ[256];
-            initNativeTypes();
-
-            attributesIndex = 0;
-            attributesTyp = new TypName[256];
-            attributesArray = new bool[256];
-            attributesName = new string[256];
-            attributesInitValue = new object[256];
-
-            enumIndex = 0;
-            enumValue = new int[512];
-            enumNames = new string[512];
-
-            objectsIndex = 0;
-            objectNames = new string[256];
-
-            results = new Struct[256];
+            objectIndex = 0;
+            objects.Clear();
+            Result.Clear();
         }
-        /// <summary>List of all attribute names</summary>
-        public string[] AttributeNames
-        {
-            get
-            {
-                string[] result = new string[attributesIndex];
-                Array.Copy(attributesName, result, attributesIndex);
-                return result;
-            }
-        }
-        /// <summary>List of all object names</summary>
-        public string[] ObjectNames
-        {
-            get
-            {
-                string[] result = new string[objectsIndex];
-                Array.Copy(objectNames, result, objectsIndex);
-                return result;
-            }
-        }
+
         public void AddConst(string name, int value)
         {
-            enumNames[enumIndex] = name;
-            enumValue[enumIndex++] = value;
+            Constants.Add(name, value);
         }
-        public void AddEnum(string group,string name,int value)
+        public void AddEnum(string group, string name, int value)
         {
-            enumNames[enumIndex] = group + '.' + name;
-            enumValue[enumIndex++] = value;
+            AddConst(group + '.' + name, value);
         }
         public void AddEnum(string group, string[] names)
         {
-            int value = 0;
             for (int i = 0; i < names.Length; i++)
             {
-                enumNames[enumIndex] = group + '.' + names[i];
-                enumValue[enumIndex++] = value++;
+                AddEnum(group, names[i], i);
             }
         }
+
         /// <summary>Add a new attribute.</summary>
         /// <param name="type">Type of the attribute. z.B byte,int...</param>
         /// <param name="name">Name of the attribute.</param>
         /// <param name="value">Default value of the attribute.</param>
-        public void AddAttribute(string type,string name,string value)
+        public void AddAttribute(string type, string name, string value)
         {
-            parse("Attributes{"+ type + " "+name+ (value.Length>0?"=" +value:"")+"}");
+            parse("Attributes{" + type + " " + name + (value.Length > 0 ? "=" + value : "") + "}");
         }
         /// <summary>Fills all public fields and properties of the referenced object with values from identically named fields of the selectet object.</summary>
         /// <param name="dstStruct">Reference to C# object/struct.</param>
         /// <param name="srcName">Name of the parsed objects.</param>
-        public void FillAttributes<T>(ref T dstStruct,string srcName)
+        public void FillAttributes<T>(ref T dstStruct, string srcName)
         {
-            int obj = compareNames(srcName, objectNames);
+            int obj = findIndexByName(srcName, objects);
             if (obj == -1) throw new Exception("Struct <" + srcName + "> is not defined");
 
             FieldInfo[] info = dstStruct.GetType().GetFields();
@@ -101,67 +63,39 @@ namespace GGL.IO
             for (int i = 0; i < info.Length; i++)
             {
 
-                int attri = compareNames(info[i].Name, attributesName);
+                int attri = findIndexByName(info[i].Name, DefaultType.Properties);
                 if (attri != -1)
                 {
-                    info[i].SetValueDirect(reference, results[obj].AttributesValue[attri]);
+                    info[i].SetValueDirect(reference, objects[obj].Values[attri]);
                 }
             }
         }
+
         /// <summary>Returns the specified attribute.</summary>
         /// <param name="objectNumber">name/id of the object </param>
         /// <param name="name">name of the attribute </param>
         public T GetAttribute<T>(int objectNumber, string name)
         {
-            return GetAttribute<T>("" + objectNumber, name);
+            return GetAttribute<T>(objectNumber.ToString(), name);
         }
+
         /// <summary>Returns the specified attribute.</summary>
         /// <param name="objectName">name of the object </param>
         /// <param name="name">name of the attribute </param>
-        public T GetAttribute<T>(string objectName,string name)
+        public T GetAttribute<T>(string objectName, string name)
         {
-            int obj = compareNames(objectName, objectNames);
-            if (obj == -1) throw new Exception("Object <"+ objectName+"> is not defined");
-            int attri = compareNames(name, attributesName);
-            if (attri == -1) throw new Exception("Attribute <" + name + "> is not declared");
-            return (T)results[obj].AttributesValue[attri];
+            return Result[objectName].Get<T>(name);
         }
-        /// <summary>Load code from a file without parsing it.</summary>
-        public void LoadFile(string path)
-        {
-            code = File.ReadAllText(path);
-        }
-        /// <summary>Load code without parsing it.</summary>
-        public void LoadCode(string code)
-        {
-            this.code = code;
-        }
+
         /// <summary>Load code from a file and parse it.</summary>
         public void ParseFile(string path)
         {
-            code = File.ReadAllText(path);
+            var code = File.ReadAllText(path);
             parse(code);
         }
+
         /// <summary>Load code and parse it.</summary>
         public void ParseCode(string code)
-        {
-            parse(this.code = code);
-        }
-        /*
-        public void ParseDeclerations()
-        {
-            parseToTokenList(code);
-            pharseEnums();
-            pharseObjectDeclaretions();
-        }
-        public void ParseInitializations()
-        {
-            pharseAttributes("Attributes");
-            parseObjectInitialization();
-        }
-        */
-        /// <summary>Parse the currently loaded code.</summary>
-        public void Parse()
         {
             parse(code);
         }

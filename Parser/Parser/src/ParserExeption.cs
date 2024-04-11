@@ -3,22 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace GGL.IO
+namespace Grille.Parsing.Tcf
 {
-    class ParserException : Exception
+    public class TcfParserException : Exception
     {
-        public int Line { get;private set;}
-        public ParserException(int line, string message) : base("line " + line + ": " + message)
+        public int Line { get; }
+
+        internal TcfParserException(int line, string message) : base("line " + line + ": " + message)
         {
             Line = line;
         }
-        public ParserException(Token token,string message) : base("line " + token.line + ": "+message)
-        {
-            Line = token.line;
-        }
-        public ParserException(Token token) : base("line " + token.line + ": " + "Unexpected token \"" + token.value + "\"")
-        {
-            Line = token.line;
-        }
+
+        internal TcfParserException(Token token, string message) : this(token.Line, $"Unexpected token \"{token.Value}\" {message}")
+        { }
+
+        internal TcfParserException(Token token) : this(token.Line, $"Unexpected token \"{token.Value}\"")
+        { }
     }
 }
